@@ -1,6 +1,7 @@
 {
   "name": "personalizacion",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "build": "npx tsc",
@@ -11,6 +12,13 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@types/express": "^5.0.3",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "mysql2": "^3.15.2",
     "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.2"
   }
 }
