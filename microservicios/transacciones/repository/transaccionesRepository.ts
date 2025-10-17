@@ -11,11 +11,6 @@ export class TransaccionesRepository {
     return result;
   }
 
-  static async getAccount() {
-    const [rows]: any = await pool.query("SELECT * FROM transacciones");
-    return rows;
-  }
-
   static async findByAccount(numero_de_cuenta: string) {
     const [rows]: any = await pool.query(
       "SELECT * FROM transacciones WHERE numero_de_cuenta = ?",
@@ -39,5 +34,15 @@ export class TransaccionesRepository {
       [id_user]
     );
     return rows;
+  }
+
+  static async updateAccountsByUserId(sql: string, values: any[]) {
+    const [resultDb]: any = await pool.query(sql, values);
+
+    if (resultDb.affectedRows === 0) {
+      return null;
+    }
+
+    return resultDb;
   }
 }
