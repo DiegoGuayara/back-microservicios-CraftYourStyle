@@ -45,4 +45,17 @@ export class TransaccionesRepository {
 
     return resultDb;
   }
+
+  static async deleteAccountsByUserId(id: number, id_user: number) {
+    const [resultDb]: any = await pool.query(
+      "DELETE FROM transacciones WHERE id = ? AND id_user = ?",
+      [id, id_user]
+    );
+
+    if (resultDb.affectedRows === 0) {
+      return;
+    }
+
+    return resultDb;
+  }
 }

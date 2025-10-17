@@ -83,11 +83,11 @@ export class TransaccionesController {
       AND id_user = ?`;
       values.push(id);
       values.push(id_user);
-      
+
       console.log("SQL:", sql);
       console.log("Values:", values);
       console.log("ID:", id, "ID_USER:", id_user);
-      
+
       const resultDb = await TransaccionesRepository.updateAccountsByUserId(
         sql,
         values
@@ -106,6 +106,27 @@ export class TransaccionesController {
       res.status(500).json({
         message: "Internal server error",
       });
+    }
+  }
+
+  static async eliminarCuenta(req: Request, res: Response) {
+    try {
+      const { id, id_user } = req.params;
+
+      const resultDb = await TransaccionesRepository.deleteAccountsByUserId(
+        Number(id),
+        Number(id_user)
+      );
+
+      if (!resultDb) {
+        res.status(404).json({ message: "Cuenta no encontrada" });
+        return;
+      }
+
+      res.status(200).json({ message: "Cuenta eliminada correctamente" });
+    } catch (error) {
+      console.error("Error al eliminar la cuenta:", error);
+      res.status(500).json({ message: "Error al eliminar la cuenta", error });
     }
   }
 }

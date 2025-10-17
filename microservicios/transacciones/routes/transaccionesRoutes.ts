@@ -12,6 +12,6 @@ router.get(
   "/obtenerCuentas/:id_user",
   TransaccionesController.obtenerCuentas.bind(transaccionesController)
 );
-router.put("/actualizarCuenta/:id_user/:id", TransaccionesController.updateUser.bind(transaccionesController));
-
+router.patch("/actualizarCuenta/:id_user/:id", TransaccionesController.updateUser.bind(transaccionesController));
+router.delete("/eliminarCuenta/:id/:id_user", TransaccionesController.eliminarCuenta.bind(transaccionesController));
 export default router;
