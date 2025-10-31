@@ -24,3 +24,6 @@ const verifyConnection = async () => {
     process.exit(1); // Salir del proceso si no se puede conectar a la base de datos
   }
 };
+verifyConnection();
+
+export default pool
