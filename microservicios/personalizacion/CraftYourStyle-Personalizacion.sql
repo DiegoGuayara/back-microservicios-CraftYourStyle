@@ -1,3 +1,7 @@
+create database if not exists CraftYourStyle-Personalizacion
+
+use CraftYourStyle-Personalizacion;
+
 create table personalizacion(
 	id INT AUTO_INCREMENT PRIMARY KEY,
 	color varchar(7) default "#fffff",

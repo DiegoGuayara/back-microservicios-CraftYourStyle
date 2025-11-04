@@ -1,3 +1,7 @@
+create database if not exists CraftYourStyle-Catalogo;
+
+use CraftYourStyle-Catalogo;
+
 create table variantes_productos(
 	id INT AUTO_INCREMENT PRIMARY KEY,
     producto_id INT NOT NULL,
