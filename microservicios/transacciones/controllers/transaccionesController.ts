@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import type { TransaccionDto } from "../DTO/transaccionesDto.js";
 import { TransaccionesRepository } from "../repository/transaccionesRepository.js";
+import axios from "axios";
 
 export class TransaccionesController {
   static async crearTransaccion(req: Request, res: Response) {
@@ -36,21 +37,23 @@ export class TransaccionesController {
     try {
       const { id_user } = req.params;
 
-      const result = await TransaccionesRepository.getAccountsByUserId(
+      const cuenta = await TransaccionesRepository.findAccountsByUserId(
         Number(id_user)
       );
 
-      if (result.length === 0) {
-        res
-          .status(404)
-          .json({ message: "No se encontraron cuentas para este usuario" });
-        return;
-      }
+      const { data } = await axios.get(
+        `http://localhost:8080/v1/usuarios/${id_user}`
+      );
 
-      res.status(200).json(result);
-    } catch (error) {
-      console.error("Error al obtener las cuentas:", error);
-      res.status(500).json({ message: "Error al obtener las cuentas", error });
+      const { contraseña, ...usuarioSinContraseña } = data.usuario;
+
+      res.status(200).json({
+        usuario: usuarioSinContraseña,
+        cuentas: cuenta,
+      });
+    } catch (error: any) {
+      console.error("Error obteniendo transacciones:", error.message);
+      return res.status(500).json({ mensaje: "Error obteniendo información" });
     }
   }
 
@@ -77,16 +80,11 @@ export class TransaccionesController {
         return;
       }
 
-      const sql = `UPDATE transacciones 
-      SET ${columns.join(", ")}
-      WHERE id = ? 
-      AND id_user = ?`;
-      values.push(id);
-      values.push(id_user);
-
-      console.log("SQL:", sql);
-      console.log("Values:", values);
-      console.log("ID:", id, "ID_USER:", id_user);
+      const sql = `UPDATE transacciones SET ${columns.join(
+        ", "
+      )} WHERE id_user = ? AND id = ?`;
+      values.push(Number(id_user));
+      values.push(Number(id));
 
       const resultDb = await TransaccionesRepository.updateAccountsByUserId(
         sql,
@@ -96,7 +94,6 @@ export class TransaccionesController {
       res.status(200).json({
         message: "User updated successfully",
         user: {
-          id: id,
           result: resultDb,
           ...camposAct,
         },

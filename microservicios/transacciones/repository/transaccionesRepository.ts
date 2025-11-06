@@ -19,18 +19,9 @@ export class TransaccionesRepository {
     return rows[0];
   }
 
-  static async getAccountsByUserId(id_user: number) {
+  static async findAccountsByUserId(id_user: number) {
     const [rows]: any = await pool.query(
-      `SELECT 
-        u.id,
-        u.nombre,
-        u.email,
-        t.numero_de_cuenta,
-        t.tipo_de_cuenta,
-        t.banco
-      FROM usuarios u
-      INNER JOIN transacciones t ON u.id = t.id_user
-      WHERE u.id = ?`,
+      "SELECT * FROM transacciones WHERE id_user = ?",
       [id_user]
     );
     return rows;
