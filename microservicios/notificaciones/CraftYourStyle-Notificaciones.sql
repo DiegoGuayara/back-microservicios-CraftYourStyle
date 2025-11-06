@@ -1,6 +1,6 @@
-crate database if not exists CraftYourStyle-Notificaciones;
+create database if not exists CraftYourStyle_Notificaciones;
 
-use CraftYourStyle-Notificaciones;
+use CraftYourStyle_Notificaciones;
 
 create table notificaciones(
 	id INT AUTO_INCREMENT PRIMARY KEY,
