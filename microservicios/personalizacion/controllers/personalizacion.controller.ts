@@ -10,16 +10,16 @@ export class PersonalizacionController{
     
     static async crearPersonalizacion(req: Request, res: Response){
         try {
-            const { color, image_url, textos, tipo_de_fuente,id } = req.body;
+            const { color, image_url, textos, tipo_letra,id } = req.body;
             const newPersonalization: PersonalizacionDto = {
                 color,
                 image_url,
                 textos,
-                tipo_de_fuente,
+                tipo_letra,
                 id
             };
 
-           if(!color || !image_url || !textos || !tipo_de_fuente){
+           if(!color || !image_url || !textos || !tipo_letra){
             res.status(400).json({ message: "Faltan datos obligatorios" });
             return;
            }

@@ -3,5 +3,5 @@ export interface PersonalizacionDto {
     color : string;
     image_url : string;
     textos : string;
-    tipo_de_fuente : string;
+    tipo_letra : string;
 }
