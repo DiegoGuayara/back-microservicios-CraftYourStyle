@@ -49,4 +49,35 @@ export class PersonalizacionController{
             console.error("Error al obtener la personalización:", error);
         }
     }
+
+    static async updatePersonalizationById(req: Request, res: Response){
+        try {
+            const { id } = req.params;
+            const fieldsToUpdate: Partial<PersonalizacionDto> = req.body;
+            const result = await PersonalizacionRepository.updatePersonalizationById(Number(id), fieldsToUpdate);
+            if (!result) {
+                res.status(404).json({ message: "Personalización no encontrada o no se proporcionaron campos para actualizar" });
+                return;
+            }
+            res.status(200).json({ message: "Personalización actualizada correctamente" });
+        } catch (error) {
+            res.status(500).json({ message: "Error al actualizar la personalización", error });
+            console.error("Error al actualizar la personalización:", error);
+        }
+    }
+
+    static async deletePersonalizationById(req: Request, res: Response){
+        try {
+            const { id } = req.params;
+            const result = await PersonalizacionRepository.deletePersonalizationById(Number(id));
+            if (!result) {
+                res.status(404).json({ message: "Personalización no encontrada" });
+                return;
+            }
+            res.status(200).json({ message: "Personalización eliminada correctamente" });
+        } catch (error) {
+            res.status(500).json({ message: "Error al eliminar la personalización", error });
+            console.error("Error al eliminar la personalización:", error);
+        }
+    }
 }
