@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import personalizacionRoutes from "./routes/personalizacion.routes.js";
 
 const app = express()
-const PORT = process.env.PORT || 10101
+const PORT = process.env.PORT || 10102
 
 app.use(express.json())
 app.use("/personalizacion", personalizacionRoutes)

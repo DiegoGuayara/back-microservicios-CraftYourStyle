@@ -1,0 +1,17 @@
+services: 
+  transacciones:
+    build:
+      context: ./microservicios/transacciones
+      dockerfile: Dockerfile
+    ports:
+      - "10101:10101"
+    env_file:
+      - ./microservicios/transacciones/.env
+  personalizacion:
+    build:
+      context: ./microservicios/personalizacion
+      dockerfile: Dockerfile
+    ports:
+      - "10102:10102"
+    env_file:
+      - ./microservicios/personalizacion/.env
