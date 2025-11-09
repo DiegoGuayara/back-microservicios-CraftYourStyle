@@ -3,10 +3,10 @@ import pool from '../config/db-config.js'
 
 export class PersonalizacionRepository {
     static async create(personalizacion: PersonalizacionDto ){
-        const { color, image_url, textos, tipo_letra,id } = personalizacion;
+        const { color, image_url, textos, tipo_letra, variant_id } = personalizacion;
         const [result] = await pool.query(
             "INSERT INTO personalizacion (color, image_url, textos, tipo_letra, variant_id) VALUES (?, ?, ?, ?, ?)",
-            [color, image_url, textos, tipo_letra,id]
+            [color, image_url, textos, tipo_letra, variant_id]
         );
         return result;
     }
