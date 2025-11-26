@@ -1,4 +1,4 @@
-services: 
+services:
   transacciones:
     build:
       context: ./microservicios/transacciones
@@ -15,3 +15,11 @@ services:
       - "10102:10102"
     env_file:
       - ./microservicios/personalizacion/.env
+  catalogo:
+    build:
+      context: ./microservicios/catalogo
+      dockerfile: Dockerfile
+    ports:
+      - "10103:10103"
+    env_file:
+      - ./microservicios/catalogo/.env
