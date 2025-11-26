@@ -8,8 +8,7 @@ create table variantes_productos(
     size VARCHAR(10) NOT NULL, 
     color VARCHAR(50) NOT NULL,    
     stock INT DEFAULT 0,
-    price DECIMAL(10,2) NOT NULL,
-    FOREIGN KEY (producto_id) REFERENCES productos(id)
+    price DECIMAL(10,2) NOT NULL
 );
 
 CREATE TABLE productos (
@@ -19,8 +18,7 @@ CREATE TABLE productos (
     imagen text not null,
     category_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (category_id) REFERENCES categoria(id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE categoria (

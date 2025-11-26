@@ -1,5 +1,5 @@
 export interface VariantProductos {
-  id: number;
+  id?: number;
   producto_id: number;
   size: string;
   color: string;

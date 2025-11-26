@@ -1,4 +1,12 @@
 services:
+  gateway:
+    build:
+      context: ./microservicios/gateway
+      dockerfile: Dockerfile
+    ports:
+      - "1010:1010"
+    env_file:
+      - ./microservicios/gateway/.env
   transacciones:
     build:
       context: ./microservicios/transacciones
