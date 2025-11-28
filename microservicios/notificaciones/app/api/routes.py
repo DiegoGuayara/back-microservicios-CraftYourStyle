@@ -4,7 +4,7 @@ from app.core.config import SessionLocal
 from app.schemas.esquema import NotificacionCreate, NotificacionResponse
 from app.services.notificacion import crear_notificacion, obtener_notificaciones
 
-router = APIRouter(prefix="/notificaciones", tags=["Notificaciones"])
+router = APIRouter(tags=["Notificaciones"])
 
 # Dependencia para obtener DB en cada request
 def get_db():

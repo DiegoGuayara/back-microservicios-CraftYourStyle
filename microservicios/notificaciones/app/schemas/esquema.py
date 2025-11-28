@@ -2,8 +2,8 @@ from pydantic import BaseModel
 from enum import Enum
 
 class TipoNotificacion(str, Enum):
-    mensaje_texto = "mensaje de texto"
-    correo_electronico = "correo electronico"
+    mensaje_texto = "mensaje_texto"
+    correo_electronico = "correo_electronico"
     push = "push"
 
 class NotificacionCreate(BaseModel):

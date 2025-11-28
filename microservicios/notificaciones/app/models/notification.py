@@ -3,8 +3,8 @@ from app.core.config import Base
 import enum
 
 class TipoNotificacion(str, enum.Enum):
-    mensaje_texto = "mensaje de texto"
-    correo_electronico = "correo electronico"
+    mensaje_texto = "mensaje_texto"
+    correo_electronico = "correo_electronico"
     push = "push"
 
 class Notificacion(Base):
