@@ -22,7 +22,7 @@ const routes = {
     pathRewrite: { "^/api/catalogo": "" },
   },
   "/api/notificaciones": {
-    target: process.env.NOTIFICACIONES_URL || "http://localhost:8000",
+    target: process.env.NOTIFICACIONES_URL || "http://notificaciones:10104",
     pathRewrite: { "^/api/notificaciones": "" },
   },
   "/api/usuarios": {

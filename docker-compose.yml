@@ -7,27 +7,58 @@ services:
       - "1010:1010"
     env_file:
       - ./microservicios/gateway/.env
+    networks:
+      - microservices-network
+    depends_on:
+      - transacciones
+      - personalizacion
+      - catalogo
+      - notificaciones
+
   transacciones:
     build:
       context: ./microservicios/transacciones
       dockerfile: Dockerfile
-    ports:
-      - "10101:10101"
+    expose:
+      - "10101"
     env_file:
       - ./microservicios/transacciones/.env
+    networks:
+      - microservices-network
+
   personalizacion:
     build:
       context: ./microservicios/personalizacion
       dockerfile: Dockerfile
-    ports:
-      - "10102:10102"
+    expose:
+      - "10102"
     env_file:
       - ./microservicios/personalizacion/.env
+    networks:
+      - microservices-network
+
   catalogo:
     build:
       context: ./microservicios/catalogo
       dockerfile: Dockerfile
-    ports:
-      - "10103:10103"
+    expose:
+      - "10103"
     env_file:
       - ./microservicios/catalogo/.env
+    networks:
+      - microservices-network
+
+  notificaciones:
+    build:
+      context: ./microservicios/notificaciones
+      dockerfile: Dockerfile
+    expose:
+      - "10104"
+    env_file:
+      - ./microservicios/notificaciones/.env
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    driver: bridge
