@@ -26,8 +26,8 @@ const routes = {
     pathRewrite: { "^/api/notificaciones": "" },
   },
   "/api/usuarios": {
-    target: process.env.USUARIOS_URL || "http://localhost:8080/v1/usuarios",
-    pathRewrite: { "^/api/usuarios": "" },
+    target: process.env.USUARIOS_URL || "http://usuarios:8080",
+    pathRewrite: { "^/api/usuarios": "/v1/usuarios" },
   },
 };
 
