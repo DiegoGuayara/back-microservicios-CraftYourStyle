@@ -1,10 +1,10 @@
-import { IsOptional } from 'class-validator';
+import { IsOptional } from "class-validator";
 export class ProductosDto {
-  id: number = 0;
-  nombre: string = '';
-  descripcion: string = '';
-  categoria: string = '';
-  imagen: string = '';
+  id?: number;
+  nombre: string = "";
+  descripcion: string = "";
+  imagen: string = "";
+  category_id: number = 0;
 
   @IsOptional()
   created_at?: Date;
@@ -12,4 +12,3 @@ export class ProductosDto {
   @IsOptional()
   updated_at?: Date;
 }
-

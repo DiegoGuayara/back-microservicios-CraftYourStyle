@@ -3,10 +3,10 @@ import pool from '../config/db-config.js'
 
 export class ProductosRepository{
     static async crearProducto(producto: ProductosDto){
-        const {id, nombre, descripcion, categoria, imagen,created_at, updated_at} = producto;
+        const {nombre, descripcion, imagen, category_id} = producto;
         const [result] = await pool.query(
-            "INSERT INTO productos (id, nombre, descripcion, categoria, imagen,created_at, updated_at) VALUES (?, ?, ?, ?,?,?,?)",
-            [id,nombre, descripcion, categoria, imagen,created_at, updated_at]
+            "INSERT INTO productos (name, description, imagen, category_id) VALUES (?, ?, ?, ?)",
+            [nombre, descripcion, imagen, category_id]
         );
         return result;
     }
