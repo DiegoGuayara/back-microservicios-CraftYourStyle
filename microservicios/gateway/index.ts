@@ -27,7 +27,7 @@ const routes = {
   },
   "/api/usuarios": {
     target: process.env.USUARIOS_URL || "http://usuarios:8080",
-    pathRewrite: { "^/api/usuarios": "/v1/usuarios" },
+    pathRewrite: { "^/api/usuarios": "" },
   },
 };
 
@@ -38,17 +38,23 @@ Object.entries(routes).forEach(([path, config]) => {
     pathRewrite: config.pathRewrite,
     on: {
       proxyReq: (_proxyReq, req, _res) => {
-        console.log(`[${new Date().toISOString()}] ${req.method} ${path} -> ${config.target}`);
+        console.log(
+          `[${new Date().toISOString()}] ${req.method} ${path} -> ${
+            config.target
+          }`
+        );
       },
       error: (err, req, res) => {
         console.error(`Error en proxy ${path}:`, err.message);
-        if ('headersSent' in res && !res.headersSent) {
-          (res as any).status(502).json({ error: "Error al conectar con el servicio" });
+        if ("headersSent" in res && !res.headersSent) {
+          (res as any)
+            .status(502)
+            .json({ error: "Error al conectar con el servicio" });
         }
       },
     },
   });
-  
+
   app.use(path, proxy);
 });
 
