@@ -46,4 +46,21 @@ export class ProductosRepository{
         )
         return result.affectedRows > 0 ? result : null
     }
+
+    static async obtenerProductosConDetalles(){
+    const [rows]: any = await pool.query(
+        ` SELECT
+            p.id,
+            p.name AS producto,
+            p.description AS descripcion,
+            p.imagen,
+            c.name AS categoria,
+            t.nombre AS tienda
+        FROM productos p,
+        JOIN categoria c ON p.category_id = c.id,
+        JOIN tienda t ON p.tienda_id = t.id,`
+    );
+    return rows;
+}
+
 }

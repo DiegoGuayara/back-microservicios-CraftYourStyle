@@ -17,6 +17,7 @@ CREATE TABLE productos (
     description TEXT,
     imagen text not null,
     category_id INT NOT NULL,
+    tienda_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -24,4 +25,9 @@ CREATE TABLE productos (
 CREATE TABLE categoria (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE tienda(
+	id int auto_increment primary key,
+    nombre varchar(100) not null
 );

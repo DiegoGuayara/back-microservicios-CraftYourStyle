@@ -26,8 +26,8 @@ export class ProductoController{
 
     static async getProducts(req:Request,res:Response){
         try{
-            const producto = await ProductosRepository.obtenerProductos()
-            res.status(200).json({message:"Productos obtenidos correctamente", data:producto})
+            const producto = await ProductosRepository.obtenerProductos()   
+            return !producto ? res.status(404).json({message:"No se encontraron productos"}) : res.status(200).json({message:"Productos obtenidos correctamente", data:producto})
         }catch(error){
             res.status(500).json({message:"Error al obtener los productos", error})
             console.error("Error al obtener los productos:", error)
@@ -39,7 +39,7 @@ export class ProductoController{
             const {id} = req.params
             const producto = await ProductosRepository.obtenerProductoPorId(Number(id))
             res.status(200).json({message:"Producto obtenido correctamente", data:producto})
-            return !producto ? res.status(404).json({message:"Producto no encontrado"}) : null
+            return !producto ? res.status(404).json({message:"Producto no encontrado"}) : null //res.status(200).json({message:"Producto obtenido correctamente", data:producto})
             // if(!producto){
             //     res.status(404).json({message:"Producto no encontrado"})
             //     return
@@ -80,6 +80,16 @@ export class ProductoController{
         }catch(error){
             res.status(500).json({message:"Error al eliminar el producto", error})
             console.error("Error al eliminar el producto:", error)
+        }
+    }
+
+    static async getProductsWithDetails(req:Request,res:Response){
+        try{
+            const productos = await ProductosRepository.obtenerProductosConDetalles()
+            return !productos ? res.status(404).json({message:"No se encontraron productos con detalles"}) :  res.status(200).json({message:"Productos con detalles obtenidos correctamente", data:productos})
+        }catch(error){
+            res.status(500).json({message:"Error al obtener los productos con detalles", error})
+            console.error("Error al obtener los productos con detalles:", error)
         }
     }
 }
