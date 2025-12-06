@@ -5,14 +5,15 @@ import type { ProductosDto } from "../DTO/productosDto.js";
 export class ProductoController{
     static async createProduct(req:Request,res:Response){
         try{
-        const {nombre, descripcion, imagen, category_id} = req.body
+        const {nombre, descripcion, imagen, category_id, tienda_id} = req.body
         const newProducto:ProductosDto = {
             nombre,
             descripcion, 
             imagen,
-            category_id
+            category_id,
+            tienda_id
         }
-        if(!nombre || !descripcion || !imagen || !category_id){
+        if(!nombre || !descripcion || !imagen || !category_id || !tienda_id){
             res.status(400).json({message:"Faltan datos obligatorios"})
             return
         }

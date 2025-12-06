@@ -5,6 +5,7 @@ export class ProductosDto {
   descripcion: string = "";
   imagen: string = "";
   category_id: number = 0;
+  tienda_id: number = 0;
 
   @IsOptional()
   created_at?: Date;
