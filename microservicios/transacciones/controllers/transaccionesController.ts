@@ -63,7 +63,7 @@ export class TransaccionesController {
       );
 
       const { data } = await axios.get(
-        `http://localhost:8080/v1/usuarios/${id_user}`
+        `http://localhost:1010/api/usuarios/v1/usuarios/${id_user}`
       );
 
       const { contraseña, ...usuarioSinContraseña } = data.usuario;
