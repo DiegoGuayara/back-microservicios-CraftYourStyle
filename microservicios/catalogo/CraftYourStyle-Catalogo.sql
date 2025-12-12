@@ -24,7 +24,8 @@ CREATE TABLE productos (
 
 CREATE TABLE categoria (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL
+    name VARCHAR(100) NOT NULL,
+    tienda_id INT NOT NULL
 );
 
 CREATE TABLE tienda(

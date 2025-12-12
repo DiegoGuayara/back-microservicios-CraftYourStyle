@@ -1,9 +1,24 @@
+/**
+ * Controller de Transacciones
+ * 
+ * Maneja las peticiones HTTP relacionadas con cuentas bancarias para transacciones.
+ * Valida los datos recibidos, verifica duplicados y se integra con el microservicio de usuarios.
+ * 
+ * Rutas base: /transacciones
+ */
+
 import type { Request, Response } from "express";
 import type { TransaccionDto } from "../DTO/transaccionesDto.js";
 import { TransaccionesRepository } from "../repository/transaccionesRepository.js";
 import axios from "axios";
 
 export class TransaccionesController {
+  /**
+   * Crea una nueva cuenta bancaria para un usuario
+   * 
+   * Ruta: POST /transacciones/crearCuenta
+   * Valida que el número de cuenta no exista previamente
+   */
   static async crearTransaccion(req: Request, res: Response) {
     try {
       const { numero_de_cuenta, tipo_de_cuenta, banco, id_user } = req.body;
@@ -33,6 +48,12 @@ export class TransaccionesController {
     }
   }
 
+  /**
+   * Obtiene todas las cuentas bancarias de un usuario
+   * 
+   * Ruta: GET /transacciones/obtenerCuentas/:id_user
+   * Se integra con el microservicio de usuarios para obtener info completa
+   */
   static async obtenerCuentas(req: Request, res: Response) {
     try {
       const { id_user } = req.params;
@@ -57,6 +78,12 @@ export class TransaccionesController {
     }
   }
 
+  /**
+   * Actualiza información de una cuenta bancaria
+   * 
+   * Ruta: PATCH /transacciones/actualizarCuenta/:id_user/:id
+   * Actualización dinámica: solo actualiza campos enviados
+   */
   static async updateUser(req: Request, res: Response) {
     try {
       const { id, id_user } = req.params;
@@ -106,6 +133,12 @@ export class TransaccionesController {
     }
   }
 
+  /**
+   * Elimina una cuenta bancaria de un usuario
+   * 
+   * Ruta: DELETE /transacciones/eliminarCuenta/:id/:id_user
+   * Requiere ID de cuenta y usuario para seguridad
+   */
   static async eliminarCuenta(req: Request, res: Response) {
     try {
       const { id, id_user } = req.params;

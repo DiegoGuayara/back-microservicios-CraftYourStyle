@@ -1,8 +1,19 @@
+/**
+ * Controller de Variantes de Productos
+ * 
+ * Gestiona las peticiones HTTP para operaciones CRUD de variantes.
+ * Las variantes permiten definir diferentes opciones de un mismo producto
+ * (ej: tallas, colores, con sus respectivos stocks y precios).
+ * 
+ * Rutas base: /variantProductos
+ */
+
 import { VariantProductosRepository } from "../repository/variant-productos.repository";
 import type { VariantProductos } from "../DTO/variant-productos";
 import type { Request, Response } from "express";
 
 export class VariantProductosController {
+  /** POST /variantProductos/crearVarianteProducto - Crea una nueva variante */
   static async crearVariantProducto(req: Request, res: Response) {
     try {
       const { producto_id, size, color, stock, price } = req.body;
@@ -38,6 +49,7 @@ export class VariantProductosController {
     }
   }
 
+  /** GET /variantProductos/obtenerVariantes - Obtiene todas las variantes */
   static async obtenerVariantProducto(req: Request, res: Response) {
     try {
       const result =
@@ -52,6 +64,7 @@ export class VariantProductosController {
     }
   }
 
+  /** GET /variantProductos/obtenerVariante/:id - Obtiene una variante por ID */
   static async obtenerVariantProductoPorId(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -73,6 +86,7 @@ export class VariantProductosController {
     }
   }
 
+  /** PATCH /variantProductos/actualizarVariante/:id - Actualiza una variante */
   static async actualizarVariantProductoPorId(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -118,6 +132,7 @@ export class VariantProductosController {
     }
   }
 
+  /** DELETE /variantProductos/eliminarVariante/:id - Elimina una variante */
   static async eliminarVariantProductoPorId(req: Request, res: Response) {
     try {
       const { id } = req.params;

@@ -1,8 +1,16 @@
+/**
+ * Controller de Categorías (Catálogo)
+ * 
+ * Gestiona las peticiones HTTP para operaciones CRUD de categorías.
+ * Rutas base: /catalogo
+ */
+
 import type { CategoriaDto } from "../DTO/categoriaDto";
 import { CategoriaRepository } from "../repository/categoria.repository";
 import type { Request, Response } from "express";
 
 export class CatalogoController {
+  /** POST /catalogo/crearCategoria - Crea una nueva categoría */
   static async crearCategoria(req: Request, res: Response) {
     try {
       const { name } = req.body;
@@ -36,6 +44,7 @@ export class CatalogoController {
     }
   }
 
+  /** GET /catalogo/obtenerCategorias - Obtiene todas las categorías */
   static async obtenerCategorias(req: Request, res: Response) {
     try {
       const categorias = await CategoriaRepository.obtenerCategorias();
@@ -61,6 +70,7 @@ export class CatalogoController {
     }
   }
 
+  /** GET /catalogo/obtenerCategoria/:id - Obtiene una categoría por ID */
   static async obtenerCategoriaPorId(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -90,6 +100,7 @@ export class CatalogoController {
     }
   }
 
+  /** DELETE /catalogo/eliminarCategoria/:id - Elimina una categoría */
   static async eliminarCategoriaPorId(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -119,6 +130,7 @@ export class CatalogoController {
     }
   }
 
+  /** PATCH /catalogo/actualizarCategoria/:id - Actualiza una categoría */
   static async actualizarCategoriaPorId(req: Request, res: Response) {
     try {
       const { id } = req.params;

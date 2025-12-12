@@ -17,6 +17,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Servicio de lógica de negocio para usuarios
+ * 
+ * Esta clase contiene toda la lógica relacionada con:
+ * - Registro de usuarios con encriptación de contraseñas (BCrypt)
+ * - Autenticación con JWT (JSON Web Token)
+ * - Validación de emails duplicados
+ * - CRUD completo de usuarios
+ */
 @Service
 public class UserServices {
     private final PasswordEncoder passwordEncoder;
@@ -30,12 +39,29 @@ public class UserServices {
         this.jwtUtil = jwtUtil;
     }
 
+    /**
+     * Obtener todos los usuarios
+     * 
+     * @return Lista completa de usuarios en la base de datos
+     */
     public List<User> getUser(){
         return this.userRepository.findAll();
     }
 
+    /**
+     * Crear un nuevo usuario
+     * 
+     * Proceso:
+     * 1. Verifica que el email no esté registrado
+     * 2. Encripta la contraseña usando BCrypt
+     * 3. Guarda el usuario en la base de datos
+     * 
+     * @param dto Datos del usuario (nombre, email, contraseña)
+     * @return ResponseEntity con el usuario creado o error 409 si email duplicado
+     */
     public ResponseEntity<Object> crearUsuario(RegisterUserDto dto){
         try {
+            // Verificar si el email ya existe
             Optional<User> respuesta = userRepository.findByEmail(dto.getEmail());
             HashMap<String,Object> datos = new HashMap<>();
 
@@ -45,12 +71,16 @@ public class UserServices {
                 return new ResponseEntity<>(datos, HttpStatus.CONFLICT);
             }
 
+            // Crear nuevo usuario
             User user = new User();
             user.setNombre(dto.getNombre());
             user.setEmail(dto.getEmail());
             user.setContraseña(dto.getContraseña());
 
+            // Encriptar contraseña con BCrypt
             user.setContraseña(passwordEncoder.encode(dto.getContraseña()));
+            
+            // Guardar en base de datos
             User nuevoUsuario = userRepository.save(user);
             datos.put("Usuario",nuevoUsuario);
             datos.put("message","usuario creado");
@@ -64,6 +94,18 @@ public class UserServices {
         }
     }
 
+    /**
+     * Autenticar usuario y generar token JWT
+     * 
+     * Proceso:
+     * 1. Busca el usuario por email
+     * 2. Verifica la contraseña con BCrypt
+     * 3. Genera un token JWT válido
+     * 4. Retorna el token y datos del usuario (sin contraseña)
+     * 
+     * @param dto Credenciales (email y contraseña)
+     * @return ResponseEntity con token JWT o error 401/404
+     */
     public ResponseEntity<Object> login(LoginUserDto dto){
         try{
             HashMap<String,Object> respuesta = new HashMap<>();
@@ -77,14 +119,17 @@ public class UserServices {
 
             User user = datos.get();
 
+            // Verificar contraseña con BCrypt
             if (!passwordEncoder.matches(dto.getContraseña(), user.getContraseña())) {
                 respuesta.put("error", true);
                 respuesta.put("message", "Contraseña incorrecta");
                 return new ResponseEntity<>(respuesta, HttpStatus.UNAUTHORIZED);
             }
 
+            // Generar token JWT
             String token = jwtUtil.generarToken(user.getEmail());
 
+            // Remover contraseña de la respuesta por seguridad
             user.setContraseña(null);
 
             respuesta.put("token", token);

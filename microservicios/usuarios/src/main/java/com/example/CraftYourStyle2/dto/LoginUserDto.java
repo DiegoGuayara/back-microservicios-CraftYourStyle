@@ -3,6 +3,13 @@ package com.example.CraftYourStyle2.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+/**
+ * DTO (Data Transfer Object) para login de usuarios
+ * 
+ * Validaciones:
+ * - email: Obligatorio
+ * - contraseña: Obligatoria, mínimo 6 caracteres
+ */
 public class LoginUserDto {
     @NotBlank(message = "el email debe de ser valido")
     private String email;

@@ -1,8 +1,16 @@
+/**
+ * Controller de Tiendas
+ * 
+ * Gestiona las peticiones HTTP para operaciones CRUD de tiendas.
+ * Rutas base: /tienda
+ */
+
 import { Request, Response } from "express";
 import { TiendaRepository } from "../repository/tienda.repository.js";
 import type { TiendaDto } from "../DTO/tiendaDto.js";
 
 export class TiendaController {
+  /** POST /tienda/crearTienda - Crea una nueva tienda */
   static async createStore(req: Request, res: Response) {
     try {
       const { nombre } = req.body;
@@ -21,6 +29,7 @@ export class TiendaController {
     }
   }
 
+  /** GET /tienda/obtenerTiendas - Obtiene todas las tiendas */
   static async getStores(req: Request, res: Response) {
     try {
       const tiendas = await TiendaRepository.obtenerTiendas();
@@ -36,6 +45,7 @@ export class TiendaController {
     }
   }
 
+  /** GET /tienda/obtenerTienda/:id - Obtiene una tienda por ID */
   static async getStoreById(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -51,6 +61,7 @@ export class TiendaController {
     }
   }
 
+  /** PATCH /tienda/actualizarTienda/:id - Actualiza una tienda */
   static async updateStoreById(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -71,6 +82,7 @@ export class TiendaController {
     }
   }
 
+  /** DELETE /tienda/eliminarTienda/:id - Elimina una tienda */
   static async deleteStoreById(req: Request, res: Response) {
     try {
       const { id } = req.params;

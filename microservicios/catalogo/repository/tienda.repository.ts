@@ -1,7 +1,15 @@
+/**
+ * Repository de Tiendas
+ * 
+ * Maneja todas las operaciones CRUD de tiendas en la base de datos.
+ * Una tienda contiene múltiples productos y categorías.
+ */
+
 import type { TiendaDto } from "../DTO/tiendaDto";
 import pool from "../config/db-config.js";
 
 export class TiendaRepository {
+  /** Crea una nueva tienda en la BD */
   static async crearTienda(tienda: TiendaDto) {
     const { nombre } = tienda;
     const [result] = await pool.query("INSERT INTO tienda (nombre) VALUES (?)", [
@@ -10,11 +18,13 @@ export class TiendaRepository {
     return result;
   }
 
+  /** Obtiene todas las tiendas */
   static async obtenerTiendas() {
     const [rows]: any = await pool.query("SELECT * FROM tienda");
     return rows;
   }
 
+  /** Obtiene una tienda por su ID */
   static async obtenerTiendaPorId(id: number) {
     const [rows]: any = await pool.query("SELECT * FROM tienda WHERE id = ?", [
       id,
@@ -22,6 +32,7 @@ export class TiendaRepository {
     return rows.length > 0 ? rows[0] : null;
   }
 
+  /** Actualiza una tienda existente (solo envía los campos a modificar) */
   static async actualizarTiendaPorId(id: number, tienda: Partial<TiendaDto>) {
     const fields = [];
     const values = [];
@@ -35,6 +46,7 @@ export class TiendaRepository {
     return result;
   }
 
+  /** Elimina una tienda por su ID */
   static async eliminarTiendaPorId(id: number) {
     const [result]: any = await pool.query("DELETE FROM tienda WHERE id = ?", [
       id,

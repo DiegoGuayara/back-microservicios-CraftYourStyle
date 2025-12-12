@@ -3,6 +3,14 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+/**
+ * DTO (Data Transfer Object) para registro y actualización de usuarios
+ * 
+ * Validaciones:
+ * - nombre: Obligatorio, no puede estar vacío
+ * - email: Debe ser un email válido
+ * - contraseña: Obligatoria, mínimo 6 caracteres
+ */
 public class RegisterUserDto {
     @NotBlank(message = "el nombre es obligatorio")
     private String nombre;

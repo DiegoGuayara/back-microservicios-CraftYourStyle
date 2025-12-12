@@ -7,7 +7,8 @@ const productoController = ProductoController;
 router.post('/crearProducto', ProductoController.createProduct.bind(productoController));
 router.get('/obtenerProductos', ProductoController.getProducts.bind(productoController));
 router.get('/obtenerProducto/:id', ProductoController.getProductById.bind(productoController));
-router.get('/obtenerProductosConDetalles', ProductoController.getProductsWithDetails.bind(productoController));
+router.get('/obtenerProductosConDetalles/:tienda_id/:category_id', ProductoController.getProductsWithDetails.bind(productoController));
+router.get('/obtenerProductosPorTienda/:tienda_id', ProductoController.getProductsByStore.bind(productoController));
 router.patch('/actualizarProducto/:id', ProductoController.updateProductById.bind(productoController));
 router.delete('/eliminarProducto/:id', ProductoController.deleteProductById.bind(productoController));
 

@@ -2,6 +2,16 @@ package com.example.CraftYourStyle2.model;
 
 import jakarta.persistence.*;
 
+/**
+ * Entidad JPA que representa un usuario en el sistema
+ * 
+ * Esta clase mapea la tabla "usuarios" en la base de datos.
+ * Campos:
+ * - id: Identificador único autogenerado
+ * - nombre: Nombre completo del usuario
+ * - email: Correo electrónico (único)
+ * - contraseña: Contraseña encriptada con BCrypt
+ */
 @Entity
 @Table(name = "usuarios")
 public class User {
