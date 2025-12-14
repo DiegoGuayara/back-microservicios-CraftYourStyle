@@ -62,14 +62,24 @@ export class TransaccionesController {
         Number(id_user)
       );
 
-      const { data } = await axios.get(
-        `http://localhost:1010/api/usuarios/v1/usuarios/${id_user}`
-      );
-
-      const { contraseña, ...usuarioSinContraseña } = data.usuario;
-
+      // Intentar obtener datos del usuario desde el microservicio de usuarios
+      let usuarioData = null;
+      try {
+        const { data } = await axios.get(
+          `http://localhost:1010/api/usuarios/v1/usuarios/${id_user}`
+        );
+        
+        if (data && data.usuario) {
+          const { contraseña, ...usuarioSinContraseña } = data.usuario;
+          usuarioData = usuarioSinContraseña;
+        }
+      } catch (axiosError: any) {
+        console.error("Error al obtener usuario:", axiosError.message);
+        // Continuar sin datos del usuario si falla
+      }
+      
       res.status(200).json({
-        usuario: usuarioSinContraseña,
+        usuario: usuarioData,
         cuentas: cuenta,
       });
     } catch (error: any) {
