@@ -1,4 +1,4 @@
-create database if not exists CraftYourStyle_Personalizacion
+create database if not exists CraftYourStyle_Personalizacion;
 
 use CraftYourStyle_Personalizacion;
 

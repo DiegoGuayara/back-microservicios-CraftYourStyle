@@ -1,22 +1,4 @@
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: mysql
-    ports:
-      - "3306:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: craftyourstyle
-    volumes:
-      - mysql-data:/var/lib/mysql
-    networks:
-      - microservices-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
@@ -41,9 +23,9 @@ services:
     expose:
       - "8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/craftyourstyle
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/craftyourstyle?createDatabaseIfNotExist=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ""
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_SHOW_SQL: "true"
       SERVER_PORT: 8080
@@ -56,8 +38,6 @@ services:
     networks:
       - microservices-network
     depends_on:
-      mysql:
-        condition: service_healthy
       rabbitmq:
         condition: service_healthy
 
@@ -149,6 +129,3 @@ services:
 networks:
   microservices-network:
     driver: bridge
-
-volumes:
-  mysql-data:
