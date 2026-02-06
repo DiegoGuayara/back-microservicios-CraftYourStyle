@@ -13,6 +13,11 @@ import time
 import pika
 from pika.exceptions import AMQPConnectionError
 
+# Imports para guardar en la base de datos
+from app.core.config import SessionLocal
+from app.services.notificacion import crear_notificacion
+from app.schemas.esquema import NotificacionCreate, TipoNotificacion
+
 # Configuración de conexión
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
 RABBITMQ_PORT = int(os.getenv("RABBITMQ_PORT", 5672))
@@ -52,21 +57,33 @@ def process_transaccion_message(ch, method, properties, body):
     """
     Procesa mensajes de transacciones completadas
     """
+    db = None
     try:
         message = json.loads(body)
         print(f"📥 [Transacción] Mensaje recibido: {message}")
         
-        # Aquí puedes agregar lógica para:
-        # - Enviar email de confirmación
-        # - Crear notificación push
-        # - Guardar en BD
+        # Crear mensaje de notificación basado en el evento
+        event_type = message.get("event", "transaccion")
+        user_id = message.get("user_id", "desconocido")
+        transaccion_id = message.get("transaccion_id", "")
+        monto = message.get("monto", "")
+        tipo = message.get("tipo", "")
         
-        # Ejemplo: crear notificación en la BD
-        # from app.core.config import SessionLocal
-        # from app.services.notificacion import crear_notificacion
-        # db = SessionLocal()
-        # crear_notificacion(db, {...})
-        # db.close()
+        # Construir mensaje descriptivo
+        mensaje_notificacion = f"Transacción {event_type}: ID {transaccion_id}, Usuario {user_id}"
+        if monto:
+            mensaje_notificacion += f", Monto: ${monto}"
+        if tipo:
+            mensaje_notificacion += f", Tipo: {tipo}"
+        
+        # Guardar en la base de datos
+        db = SessionLocal()
+        notificacion_data = NotificacionCreate(
+            tipo_de_notificacion=TipoNotificacion.correo_electronico,
+            mensaje=mensaje_notificacion[:250]  # Limitar a 250 caracteres
+        )
+        nueva_notificacion = crear_notificacion(db, notificacion_data)
+        print(f"💾 [Transacción] Notificación guardada con ID: {nueva_notificacion.id}")
         
         print(f"✅ [Transacción] Mensaje procesado correctamente")
         ch.basic_ack(delivery_tag=method.delivery_tag)
@@ -74,20 +91,47 @@ def process_transaccion_message(ch, method, properties, body):
     except Exception as e:
         print(f"❌ [Transacción] Error procesando mensaje: {e}")
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+    finally:
+        if db:
+            db.close()
 
 
 def process_usuario_message(ch, method, properties, body):
     """
     Procesa mensajes de eventos de usuario
     """
+    db = None
     try:
         message = json.loads(body)
         print(f"📥 [Usuario] Mensaje recibido: {message}")
         
-        # Aquí puedes agregar lógica para:
-        # - Enviar email de bienvenida
-        # - Notificar cambios en la cuenta
-        # - Enviar recordatorios
+        # Crear mensaje de notificación basado en el evento
+        event_type = message.get("event", "usuario")
+        user_id = message.get("user_id", "desconocido")
+        email = message.get("email", "")
+        nombre = message.get("nombre", "")
+        
+        # Construir mensaje descriptivo según el tipo de evento
+        if event_type == "usuario_registrado":
+            mensaje_notificacion = f"¡Bienvenido {nombre}! Tu cuenta ha sido creada exitosamente."
+        elif event_type == "usuario_login":
+            mensaje_notificacion = f"Inicio de sesión detectado para el usuario {email}."
+        elif event_type == "usuario_actualizado":
+            campo = message.get("campo_actualizado", "perfil")
+            mensaje_notificacion = f"Tu {campo} ha sido actualizado correctamente."
+        elif event_type == "usuario_eliminado":
+            mensaje_notificacion = f"La cuenta del usuario {user_id} ha sido eliminada."
+        else:
+            mensaje_notificacion = f"Evento de usuario: {event_type}, ID: {user_id}"
+        
+        # Guardar en la base de datos
+        db = SessionLocal()
+        notificacion_data = NotificacionCreate(
+            tipo_de_notificacion=TipoNotificacion.correo_electronico,
+            mensaje=mensaje_notificacion[:250]  # Limitar a 250 caracteres
+        )
+        nueva_notificacion = crear_notificacion(db, notificacion_data)
+        print(f"💾 [Usuario] Notificación guardada con ID: {nueva_notificacion.id}")
         
         print(f"✅ [Usuario] Mensaje procesado correctamente")
         ch.basic_ack(delivery_tag=method.delivery_tag)
@@ -95,6 +139,9 @@ def process_usuario_message(ch, method, properties, body):
     except Exception as e:
         print(f"❌ [Usuario] Error procesando mensaje: {e}")
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+    finally:
+        if db:
+            db.close()
 
 
 def start_consumer(queue_name: str, routing_key: str, callback):

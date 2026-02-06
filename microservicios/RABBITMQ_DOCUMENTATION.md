@@ -2,6 +2,7 @@
 
 ## 📋 Tabla de Contenidos
 - [Visión General](#visión-general)
+- [Orden de Ingreso de Datos](#orden-de-ingreso-de-datos)
 - [Arquitectura](#arquitectura)
 - [Topología de Mensajería](#topología-de-mensajería)
 - [Microservicios](#microservicios)
@@ -25,6 +26,58 @@ Este proyecto utiliza **RabbitMQ** como sistema de mensajería asíncrona para l
 - ✅ **Escalabilidad**: Fácil agregar nuevos consumidores
 - ✅ **Resiliencia**: Mensajes persistentes y reintento automático
 - ✅ **Flexibilidad**: Routing keys permiten patrones complejos
+
+---
+
+## Orden de Ingreso de Datos
+
+### 🔢 Secuencia Recomendada para Registro de Datos
+
+Para el correcto funcionamiento del sistema, los datos deben ingresarse en el siguiente orden:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    ORDEN DE INGRESO DE DATOS                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  1️⃣ USUARIOS          2️⃣ CATÁLOGO           3️⃣ PERSONALIZACIÓN     4️⃣ TRANSACCIONES
+  ──────────────       ──────────────        ──────────────────     ────────────────
+  │ Registrar  │       │ Registrar  │        │   Crear diseño   │   │   Crear      │
+  │ usuario    │  ──►  │ productos  │   ──►  │   personalizado  │──►│   transacción│
+  │            │       │ y variantes│        │                  │   │              │
+  └────────────┘       └────────────┘        └──────────────────┘   └──────────────┘
+        │                                            │                     │
+        │                                            │                     │
+        ▼                                            ▼                     ▼
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │                         5️⃣ NOTIFICACIONES                                   │
+  │                    (Recibe eventos automáticamente)                         │
+  └─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Paso 1: Usuarios (Requerido primero)
+- **Endpoint**: `POST /v8/usuarios`
+- **Descripción**: Registrar usuario con nombre, email y contraseña
+- **Evento RabbitMQ**: Publica `usuario_registrado` → Notificaciones lo recibe
+
+### Paso 2: Catálogo (Independiente de usuarios)
+- **Descripción**: Registrar productos y sus variantes disponibles
+- **Nota**: Este paso puede hacerse en paralelo con el paso 1
+
+### Paso 3: Personalización (Requiere usuario y variante)
+- **Endpoint**: Crear personalización
+- **Requisitos previos**:
+  - `user_id` del usuario registrado
+  - `variant_id` del catálogo
+- **Evento RabbitMQ**: Publica `personalizacion.confirmada` → Transacciones lo recibe
+
+### Paso 4: Transacciones (Requiere personalización)
+- **Descripción**: Se crea automáticamente cuando Transacciones recibe el evento de personalización
+- **Evento RabbitMQ**: Publica `transaccion.completada` → Notificaciones lo recibe
+
+### Paso 5: Notificaciones (Automático)
+- **Descripción**: Recibe y procesa eventos automáticamente
+- **No requiere acción manual**: Solo consume mensajes de RabbitMQ
 
 ---
 
@@ -635,5 +688,6 @@ Error: connect ECONNREFUSED 127.0.0.1:5672
 ---
 
 **Documentación creada**: 2024  
+**Última actualización**: Febrero 2026  
 **Autor**: CraftYourStyle Team  
-**Versión**: 1.0
+**Versión**: 1.1
