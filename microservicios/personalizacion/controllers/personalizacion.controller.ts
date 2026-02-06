@@ -10,6 +10,7 @@
 import type { Request, Response } from "express";
 import { PersonalizacionRepository } from "../repository/personalizacion.repository.js";
 import type { PersonalizacionDto } from "../DTO/personalizacionDto.js";
+import { publishPersonalizacionConfirmada } from "../config/rabbitmq.js";
 
 export class PersonalizacionController {
   /**
@@ -61,7 +62,18 @@ export class PersonalizacionController {
         return;
       }
 
-      const result = await PersonalizacionRepository.create(newPersonalization);
+      const result = await PersonalizacionRepository.create(newPersonalization) as { insertId: number };
+
+      // Publicar evento a RabbitMQ para notificar a Transacciones
+      await publishPersonalizacionConfirmada({
+        personalizacion_id: result.insertId,
+        variant_id,
+        color,
+        image_url,
+        textos,
+        tipo_letra,
+      });
+
       res.status(201).json({ message: "Personalización creada", id: result });
     } catch (error) {
       res

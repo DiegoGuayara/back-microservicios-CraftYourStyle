@@ -7,6 +7,7 @@
  * - Actualización de información de cuentas
  * - Eliminación de cuentas
  * - Integración con microservicio de usuarios
+ * - Mensajería con RabbitMQ
  * 
  * Puerto: 10101
  * Base de datos: CraftYourStyle_Transacciones
@@ -15,6 +16,8 @@
 import express from "express";
 import type { Request, Response } from "express";
 import router from "./routes/transaccionesRoutes.js";
+import { connectRabbitMQ, startConsumer, closeConnection } from "./config/rabbitmq.js";
+import { processMessage } from "./config/messageHandler.js";
 
 const app = express()
 const PORT = process.env.PORT || 10101
@@ -30,7 +33,34 @@ app.get("/", (req: Request, res:Response) => {
     res.send("Servicio de Transacciones")
 })
 
+// Función para inicializar RabbitMQ
+async function initRabbitMQ() {
+    try {
+        await connectRabbitMQ();
+        await startConsumer(processMessage);
+        console.log("🐰 RabbitMQ inicializado correctamente");
+    } catch (error) {
+        console.error("❌ Error inicializando RabbitMQ:", error);
+    }
+}
+
 // Iniciar el servidor
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`Servidor de transacciones corriendo en el puerto ${PORT}`);
-})
+    
+    // Inicializar RabbitMQ después de que el servidor esté listo
+    await initRabbitMQ();
+});
+
+// Manejar cierre graceful
+process.on("SIGINT", async () => {
+    console.log("\n🛑 Cerrando servidor...");
+    await closeConnection();
+    process.exit(0);
+});
+
+process.on("SIGTERM", async () => {
+    console.log("\n🛑 Cerrando servidor...");
+    await closeConnection();
+    process.exit(0);
+});
