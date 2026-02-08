@@ -14,12 +14,24 @@
 import express from "express";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import dotenv from "dotenv";
+import cors from "cors";
+import { IncomingMessage } from "http";
+
+// Extend IncomingMessage to include body property added by express.json()
+declare module "http" {
+  interface IncomingMessage {
+    body?: any;
+  }
+}
 
 // Cargar variables de entorno desde archivo .env
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 1010;
+
+app.use(cors()); // Habilitar CORS para permitir peticiones desde el frontend
+app.use(express.json()); // Parsear JSON en el cuerpo de las peticiones
 
 /**
  * Configuración de rutas del Gateway
@@ -68,12 +80,19 @@ Object.entries(routes).forEach(([path, config]) => {
     pathRewrite: config.pathRewrite, // Reescribe el path antes de enviar
     on: {
       // Hook que se ejecuta antes de enviar la petición al microservicio
-      proxyReq: (_proxyReq, req, _res) => {
+      proxyReq: (proxyReq, req, _res) => {
         console.log(
           `[${new Date().toISOString()}] ${req.method} ${path} -> ${
             config.target
           }`
         );
+        // Re-stream el body si fue consumido por express.json()
+        if (req.body && Object.keys(req.body).length > 0) {
+          const bodyData = JSON.stringify(req.body);
+          proxyReq.setHeader('Content-Type', 'application/json');
+          proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+          proxyReq.write(bodyData);
+        }
       },
       // Hook que se ejecuta cuando hay un error en la conexión
       error: (err, req, res) => {
