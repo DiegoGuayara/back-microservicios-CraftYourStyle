@@ -1,10 +1,14 @@
-from mirascope.core import openai, prompt_template
-from mirascope.core.openai import OpenAICallResponse
+from mirascope.core import gemini, prompt_template
+from mirascope.core.gemini import GeminiCallResponse
 from typing import List, Optional
 from app.config.settings import settings
+import os
+
+# Configurar la API key de Gemini
+os.environ["GOOGLE_API_KEY"] = settings.GEMINI_API_KEY
 
 
-@openai.call(model="gpt-4o", client=None)
+@gemini.call(model="gemini-1.5-flash")
 @prompt_template(
     """
     SYSTEM:
@@ -33,7 +37,7 @@ from app.config.settings import settings
 async def fashion_agent(
     user_message: str,
     context: Optional[str] = None
-) -> OpenAICallResponse:
+) -> GeminiCallResponse:
     """
     Agente principal de moda y personalización
     
@@ -47,7 +51,7 @@ async def fashion_agent(
     pass
 
 
-@openai.call(model="gpt-4o", client=None)
+@gemini.call(model="gemini-1.5-flash")
 @prompt_template(
     """
     SYSTEM:
@@ -69,7 +73,7 @@ async def fashion_agent(
 async def generate_design_prompt(
     user_request: str,
     garment_type: str = "camiseta"
-) -> OpenAICallResponse:
+) -> GeminiCallResponse:
     """
     Genera un prompt optimizado para Stable Diffusion
     
@@ -83,7 +87,7 @@ async def generate_design_prompt(
     pass
 
 
-@openai.call(model="gpt-4o-mini", client=None)
+@gemini.call(model="gemini-1.5-flash")
 @prompt_template(
     """
     SYSTEM:
@@ -100,7 +104,7 @@ async def generate_design_prompt(
     Describe esta imagen en detalle para que pueda ser usada en personalización de prendas.
     """
 )
-async def analyze_user_image(image_url: str) -> OpenAICallResponse:
+async def analyze_user_image(image_url: str) -> GeminiCallResponse:
     """
     Analiza una imagen subida por el usuario
     

@@ -5,7 +5,7 @@ Microservicio de agente de IA para personalización de moda usando Mirascope, Fa
 ## 🚀 Características
 
 - **Chat inteligente** con agente de IA especializado en moda
-- **Análisis de imágenes** usando GPT-4 Vision
+- **Análisis de imágenes** usando Gemini Vision
 - **Virtual Try-On** con modelos de ML (Banana)
 - **Personalización de prendas** con diseños personalizados
 - **Gestión de sesiones** de conversación
@@ -18,13 +18,13 @@ Microservicio de agente de IA para personalización de moda usando Mirascope, Fa
 - **SQLAlchemy** - ORM para MySQL
 - **Banana** - Hosting de modelos ML
 - **Cloudinary** - Almacenamiento de imágenes
-- **OpenAI GPT-4** - Modelo de lenguaje
+- **Google Gemini** - Modelo de lenguaje
 
 ## 📋 Requisitos
 
 - Python 3.11+
 - MySQL 8.0+
-- Cuenta de OpenAI (API Key)
+- Cuenta de Google AI Studio (API Key de Gemini)
 - Cuenta de Cloudinary (opcional)
 - Cuenta de Banana (opcional)
 
@@ -60,8 +60,8 @@ DB_PASSWORD=
 DB_NAME=CraftYourStyle_Personalizacion
 DB_PORT=3306
 
-# OpenAI
-OPENAI_API_KEY=tu_api_key_aqui
+# Gemini (Google AI)
+GEMINI_API_KEY=tu_api_key_aqui
 
 # Cloudinary
 CLOUDINARY_CLOUD_NAME=tu_cloud_name
@@ -161,11 +161,11 @@ print(response.json()["imagen_resultado_url"])
 
 ## 🔑 Configuración de APIs
 
-### OpenAI
+### Google Gemini
 
-1. Crea una cuenta en [OpenAI](https://platform.openai.com)
-2. Genera un API key
-3. Añádela al `.env`
+1. Ve a [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Crea un API key
+3. Añádela al `.env` como `GEMINI_API_KEY`
 
 ### Banana
 
@@ -257,7 +257,7 @@ Agentes de IA con Mirascope:
 
 | Archivo | Descripción |
 |---------|-------------|
-| `fashion_agent.py` | **Agente principal** - Función `fashion_agent()` que conversa con el usuario sobre moda y personalización. Usa GPT-4 |
+| `fashion_agent.py` | **Agente principal** - Función `fashion_agent()` que conversa con el usuario sobre moda y personalización. Usa Gemini |
 | `fashion_agent.py` | Función `generate_design_prompt()` - Genera prompts optimizados para Stable Diffusion |
 | `fashion_agent.py` | Función `analyze_user_image()` - Analiza imágenes subidas por el usuario usando GPT-4 Vision |
 | `prompts.py` | Todos los system prompts para diferentes funcionalidades del agente |

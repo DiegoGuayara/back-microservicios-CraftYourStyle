@@ -15,11 +15,8 @@ class Settings(BaseSettings):
     # Server
     PORT: int = 10105
     
-    # OpenAI
-    OPENAI_API_KEY: str
-    
-    # Anthropic
-    ANTHROPIC_API_KEY: Optional[str] = None
+    # Gemini (Google AI)
+    GEMINI_API_KEY: str
     
     # Cloudinary
     CLOUDINARY_CLOUD_NAME: Optional[str] = None

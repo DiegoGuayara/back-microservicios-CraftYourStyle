@@ -3,7 +3,7 @@ fastapi==0.115.5
 uvicorn[standard]==0.32.1
 
 # Agente IA
-mirascope[openai,anthropic]==1.16.0
+mirascope[gemini]==1.16.0
 
 # Base de datos
 sqlalchemy==2.0.36
