@@ -41,6 +41,31 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  agente-ia:
+    build:
+      context: ./microservicios/agente IA
+      dockerfile: Dockerfile
+    expose:
+      - "10105"
+    env_file:
+      - ./microservicios/agente IA/.env
+    environment:
+      DB_HOST: host.docker.internal
+      DB_USER: root
+      DB_PASSWORD: ""
+      DB_NAME: CraftYourStyle_Personalizacion
+      DB_PORT: 3306
+      PORT: 10105
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    networks:
+      - microservices-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
   gateway:
     build:
       context: ./microservicios/gateway
@@ -57,6 +82,7 @@ services:
       - personalizacion
       - catalogo
       - notificaciones
+      - agente-ia
 
   transacciones:
     build:

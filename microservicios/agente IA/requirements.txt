@@ -1,0 +1,38 @@
+# Framework web
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+
+# Agente IA
+mirascope[openai,anthropic]==1.16.0
+
+# Base de datos
+sqlalchemy==2.0.36
+pymysql==1.1.1
+cryptography==44.0.0
+
+# Almacenamiento de imágenes
+cloudinary==1.41.0
+pillow==11.0.0
+
+# Variables de entorno
+python-dotenv==1.0.1
+
+# Validación
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+# HTTP cliente
+httpx==0.28.1
+aiofiles==24.1.0
+
+# RabbitMQ (para comunicación con otros microservicios)
+pika==1.3.2
+aio-pika==9.5.2
+
+# Utilidades
+python-multipart==0.0.20
+python-jose[cryptography]==3.3.0
+passlib==1.7.4
+
+# Banana SDK (para modelos ML)
+banana-dev==4.0.1
