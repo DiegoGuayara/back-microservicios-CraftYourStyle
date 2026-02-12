@@ -311,7 +311,7 @@ Entorno virtual de Python con todas las dependencias instaladas. **NO se sube a 
 ```
 Usuario → POST /chat/session/{id}/message → chat.py (route) 
   → AgentService.process_user_message() → fashion_agent() (Mirascope)
-  → OpenAI GPT-4 → Respuesta del agente → Guardar en BD → Usuario
+  → Google Gemini → Respuesta del agente → Guardar en BD → Usuario
 ```
 
 ### Subir Imagen
@@ -342,9 +342,9 @@ Este microservicio se comunica con:
 
 Verifica que MySQL esté corriendo y las credenciales sean correctas.
 
-### Error con OpenAI
+### Error con Gemini
 
-Asegúrate de tener créditos en tu cuenta de OpenAI y que el API key sea válido.
+Asegúrate de que tu API key de Google Gemini sea válida y esté activa.
 
 ### Imágenes no se suben
 
