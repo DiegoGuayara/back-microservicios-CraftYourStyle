@@ -19,7 +19,7 @@ import tiendaRouter from "./routes/tienda.routes";
 dotenv.config();
 
 const app = express();
-const PORT = 10103; // Puerto donde corre el microservicio de catálogo
+const PORT = process.env.PORT || 10103; // Puerto donde corre el microservicio de catálogo
 
 // Middleware para parsear JSON en las peticiones
 app.use(express.json());

@@ -22,10 +22,14 @@ services:
       dockerfile: Dockerfile
     expose:
       - "8080"
+    env_file:
+      - ./microservicios/usuarios/.env
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/craftyourstyle?createDatabaseIfNotExist=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ""
+      DB_HOST: host.docker.internal
+      DB_PORT: 3306
+      DB_NAME: craftyourstyle
+      DB_USER: root
+      DB_PASSWORD: ""
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_SHOW_SQL: "true"
       SERVER_PORT: 8080

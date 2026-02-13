@@ -1,6 +1,7 @@
 package com.example.CraftYourStyle2.model;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 /**
  * Entidad JPA que representa un usuario en el sistema
@@ -11,6 +12,10 @@ import jakarta.persistence.*;
  * - nombre: Nombre completo del usuario
  * - email: Correo electrónico (único)
  * - contraseña: Contraseña encriptada con BCrypt
+ * - emailVerificado: Indica si el email ha sido verificado
+ * - tokenVerificacion: Token para verificar el email
+ * - tokenRecuperacion: Token para recuperar la contraseña
+ * - fechaExpiracionToken: Fecha de expiración del token de recuperación
  */
 @Entity
 @Table(name = "usuarios")
@@ -21,6 +26,18 @@ public class User {
     private String nombre;
     private String email;
     private String contraseña;
+    
+    @Column(name = "email_verificado")
+    private Boolean emailVerificado = false;
+    
+    @Column(name = "token_verificacion")
+    private String tokenVerificacion;
+    
+    @Column(name = "token_recuperacion")
+    private String tokenRecuperacion;
+    
+    @Column(name = "fecha_expiracion_token")
+    private LocalDateTime fechaExpiracionToken;
 
     public User() {
     }
@@ -30,6 +47,7 @@ public class User {
         this.nombre = nombre;
         this.email = email;
         this.contraseña = contraseña;
+        this.emailVerificado = false;
     }
 
     public Long getId() {
@@ -62,5 +80,37 @@ public class User {
 
     public void setContraseña(String contraseña) {
         this.contraseña = contraseña;
+    }
+
+    public Boolean getEmailVerificado() {
+        return emailVerificado;
+    }
+
+    public void setEmailVerificado(Boolean emailVerificado) {
+        this.emailVerificado = emailVerificado;
+    }
+
+    public String getTokenVerificacion() {
+        return tokenVerificacion;
+    }
+
+    public void setTokenVerificacion(String tokenVerificacion) {
+        this.tokenVerificacion = tokenVerificacion;
+    }
+
+    public String getTokenRecuperacion() {
+        return tokenRecuperacion;
+    }
+
+    public void setTokenRecuperacion(String tokenRecuperacion) {
+        this.tokenRecuperacion = tokenRecuperacion;
+    }
+
+    public LocalDateTime getFechaExpiracionToken() {
+        return fechaExpiracionToken;
+    }
+
+    public void setFechaExpiracionToken(LocalDateTime fechaExpiracionToken) {
+        this.fechaExpiracionToken = fechaExpiracionToken;
     }
 }

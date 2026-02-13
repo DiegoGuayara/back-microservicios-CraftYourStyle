@@ -3,6 +3,8 @@ import com.example.CraftYourStyle2.config.JwtUtil;
 import com.example.CraftYourStyle2.config.SecurityConfig;
 import com.example.CraftYourStyle2.dto.LoginUserDto;
 import com.example.CraftYourStyle2.dto.RegisterUserDto;
+import com.example.CraftYourStyle2.dto.ForgotPasswordDto;
+import com.example.CraftYourStyle2.dto.ResetPasswordDto;
 import com.example.CraftYourStyle2.model.User;
 import com.example.CraftYourStyle2.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,9 +15,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Servicio de lógica de negocio para usuarios
@@ -31,12 +35,14 @@ public class UserServices {
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
+    private final EmailService emailService;
 
     @Autowired
-    public UserServices(PasswordEncoder passwordEncoder ,UserRepository userRepository, JwtUtil jwtUtil){
+    public UserServices(PasswordEncoder passwordEncoder, UserRepository userRepository, JwtUtil jwtUtil, EmailService emailService){
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
+        this.emailService = emailService;
     }
 
     /**
@@ -80,10 +86,20 @@ public class UserServices {
             // Encriptar contraseña con BCrypt
             user.setContraseña(passwordEncoder.encode(dto.getContraseña()));
             
+            // Generar token de verificación de email
+            String tokenVerificacion = UUID.randomUUID().toString();
+            user.setTokenVerificacion(tokenVerificacion);
+            user.setEmailVerificado(false);
+            
             // Guardar en base de datos
             User nuevoUsuario = userRepository.save(user);
+            
+            // Enviar correo de verificación
+            emailService.enviarCorreoVerificacion(user.getEmail(), user.getNombre(), tokenVerificacion);
+            
+            nuevoUsuario.setContraseña(null);
             datos.put("Usuario",nuevoUsuario);
-            datos.put("message","usuario creado");
+            datos.put("message","Usuario creado. Por favor verifica tu correo electrónico.");
 
             return new ResponseEntity<>(datos,HttpStatus.CREATED);
         } catch (Exception e) {
@@ -215,6 +231,169 @@ public class UserServices {
         } catch (Exception e) {
             respuesta.put("mensaje", "Error al eliminar el usuario.");
             respuesta.put("error", e.getMessage());
+            return new ResponseEntity<>(respuesta, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Verificar el email del usuario usando el token enviado por correo
+     * 
+     * @param token Token de verificación
+     * @return ResponseEntity con el resultado de la verificación
+     */
+    public ResponseEntity<Object> verificarEmail(String token) {
+        HashMap<String, Object> respuesta = new HashMap<>();
+        try {
+            Optional<User> datos = userRepository.findByTokenVerificacion(token);
+            
+            if (datos.isEmpty()) {
+                respuesta.put("error", true);
+                respuesta.put("message", "Token de verificación inválido o expirado");
+                return new ResponseEntity<>(respuesta, HttpStatus.BAD_REQUEST);
+            }
+            
+            User user = datos.get();
+            
+            if (user.getEmailVerificado()) {
+                respuesta.put("message", "El email ya fue verificado anteriormente");
+                return new ResponseEntity<>(respuesta, HttpStatus.OK);
+            }
+            
+            user.setEmailVerificado(true);
+            user.setTokenVerificacion(null);
+            userRepository.save(user);
+            
+            respuesta.put("message", "Email verificado exitosamente");
+            return new ResponseEntity<>(respuesta, HttpStatus.OK);
+            
+        } catch (Exception e) {
+            respuesta.put("error", true);
+            respuesta.put("message", "Error al verificar el email");
+            return new ResponseEntity<>(respuesta, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Solicitar recuperación de contraseña
+     * Genera un token y envía un correo con el enlace de recuperación
+     * 
+     * @param dto Contiene el email del usuario
+     * @return ResponseEntity con el resultado de la operación
+     */
+    public ResponseEntity<Object> solicitarRecuperacion(ForgotPasswordDto dto) {
+        HashMap<String, Object> respuesta = new HashMap<>();
+        try {
+            Optional<User> datos = userRepository.findByEmail(dto.getEmail());
+            
+            // Por seguridad, siempre retornamos el mismo mensaje
+            // para no revelar si el email existe o no
+            if (datos.isEmpty()) {
+                respuesta.put("message", "Si el correo existe, recibirás un enlace para restablecer tu contraseña");
+                return new ResponseEntity<>(respuesta, HttpStatus.OK);
+            }
+            
+            User user = datos.get();
+            
+            // Generar token de recuperación
+            String tokenRecuperacion = UUID.randomUUID().toString();
+            user.setTokenRecuperacion(tokenRecuperacion);
+            user.setFechaExpiracionToken(LocalDateTime.now().plusHours(1)); // Expira en 1 hora
+            userRepository.save(user);
+            
+            // Enviar correo de recuperación
+            emailService.enviarCorreoRecuperacion(user.getEmail(), user.getNombre(), tokenRecuperacion);
+            
+            respuesta.put("message", "Si el correo existe, recibirás un enlace para restablecer tu contraseña");
+            return new ResponseEntity<>(respuesta, HttpStatus.OK);
+            
+        } catch (Exception e) {
+            respuesta.put("error", true);
+            respuesta.put("message", "Error al procesar la solicitud");
+            return new ResponseEntity<>(respuesta, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Restablecer la contraseña usando el token de recuperación
+     * 
+     * @param dto Contiene el token y la nueva contraseña
+     * @return ResponseEntity con el resultado de la operación
+     */
+    public ResponseEntity<Object> restablecerContrasena(ResetPasswordDto dto) {
+        HashMap<String, Object> respuesta = new HashMap<>();
+        try {
+            Optional<User> datos = userRepository.findByTokenRecuperacion(dto.getToken());
+            
+            if (datos.isEmpty()) {
+                respuesta.put("error", true);
+                respuesta.put("message", "Token inválido o expirado");
+                return new ResponseEntity<>(respuesta, HttpStatus.BAD_REQUEST);
+            }
+            
+            User user = datos.get();
+            
+            // Verificar si el token ha expirado
+            if (user.getFechaExpiracionToken() == null || 
+                user.getFechaExpiracionToken().isBefore(LocalDateTime.now())) {
+                respuesta.put("error", true);
+                respuesta.put("message", "El token ha expirado. Solicita un nuevo enlace de recuperación");
+                return new ResponseEntity<>(respuesta, HttpStatus.BAD_REQUEST);
+            }
+            
+            // Actualizar contraseña
+            user.setContraseña(passwordEncoder.encode(dto.getNuevaContraseña()));
+            user.setTokenRecuperacion(null);
+            user.setFechaExpiracionToken(null);
+            userRepository.save(user);
+            
+            respuesta.put("message", "Contraseña restablecida exitosamente");
+            return new ResponseEntity<>(respuesta, HttpStatus.OK);
+            
+        } catch (Exception e) {
+            respuesta.put("error", true);
+            respuesta.put("message", "Error al restablecer la contraseña");
+            return new ResponseEntity<>(respuesta, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Reenviar correo de verificación
+     * 
+     * @param email Email del usuario
+     * @return ResponseEntity con el resultado de la operación
+     */
+    public ResponseEntity<Object> reenviarVerificacion(String email) {
+        HashMap<String, Object> respuesta = new HashMap<>();
+        try {
+            Optional<User> datos = userRepository.findByEmail(email);
+            
+            if (datos.isEmpty()) {
+                respuesta.put("error", true);
+                respuesta.put("message", "Usuario no encontrado");
+                return new ResponseEntity<>(respuesta, HttpStatus.NOT_FOUND);
+            }
+            
+            User user = datos.get();
+            
+            if (user.getEmailVerificado()) {
+                respuesta.put("message", "El email ya está verificado");
+                return new ResponseEntity<>(respuesta, HttpStatus.OK);
+            }
+            
+            // Generar nuevo token
+            String nuevoToken = UUID.randomUUID().toString();
+            user.setTokenVerificacion(nuevoToken);
+            userRepository.save(user);
+            
+            // Reenviar correo
+            emailService.enviarCorreoVerificacion(user.getEmail(), user.getNombre(), nuevoToken);
+            
+            respuesta.put("message", "Correo de verificación reenviado");
+            return new ResponseEntity<>(respuesta, HttpStatus.OK);
+            
+        } catch (Exception e) {
+            respuesta.put("error", true);
+            respuesta.put("message", "Error al reenviar el correo de verificación");
             return new ResponseEntity<>(respuesta, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

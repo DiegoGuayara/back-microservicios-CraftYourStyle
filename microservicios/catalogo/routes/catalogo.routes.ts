@@ -5,8 +5,8 @@ const router = Router();
 
 router.post("/crearCategoria", CatalogoController.crearCategoria);
 router.get("/obtenerCategorias", CatalogoController.obtenerCategorias);
-router.get("/obtenerCategorias/:id", CatalogoController.obtenerCategoriaPorId);
-router.put(
+router.get("/obtenerCategoria/:id", CatalogoController.obtenerCategoriaPorId);
+router.patch(
   "/actualizarCategoria/:id",
   CatalogoController.actualizarCategoriaPorId
 );

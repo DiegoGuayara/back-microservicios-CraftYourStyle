@@ -13,17 +13,18 @@ export class CatalogoController {
   /** POST /catalogo/crearCategoria - Crea una nueva categoría */
   static async crearCategoria(req: Request, res: Response) {
     try {
-      const { name } = req.body;
+      const { name, tienda_id } = req.body;
 
-      if (!name) {
+      if (!name || !tienda_id) {
         res.status(400).json({
-          message: "Faltan datos obligatorios por ingresar",
+          message: "Faltan datos obligatorios (name y tienda_id son requeridos)",
         });
         return;
       }
 
       const nuevaCategoria: CategoriaDto = {
         name,
+        tienda_id,
       };
 
       const resultado = await CategoriaRepository.crearCategoria(

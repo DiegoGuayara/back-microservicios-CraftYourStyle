@@ -12,7 +12,7 @@ router.get(
   "/obtenerVariante/:id",
   VariantProductosController.obtenerVariantProductoPorId
 );
-router.put(
+router.patch(
   "/actualizarVariante/:id",
   VariantProductosController.actualizarVariantProductoPorId
 );

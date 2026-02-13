@@ -1,6 +1,8 @@
 package com.example.CraftYourStyle2.controllers;
 import com.example.CraftYourStyle2.dto.LoginUserDto;
 import com.example.CraftYourStyle2.dto.RegisterUserDto;
+import com.example.CraftYourStyle2.dto.ForgotPasswordDto;
+import com.example.CraftYourStyle2.dto.ResetPasswordDto;
 import com.example.CraftYourStyle2.model.User;
 import com.example.CraftYourStyle2.services.UserServices;
 import jakarta.validation.Valid;
@@ -102,5 +104,53 @@ public class UserController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> eliminar(@PathVariable Long id){
         return this.userServices.eliminarUsario(id);
+    }
+
+    /**
+     * Verificar email del usuario
+     * GET /v1/usuarios/verificar-email?token={token}
+     * 
+     * @param token Token de verificación enviado por correo
+     * @return ResponseEntity con el resultado de la verificación
+     */
+    @GetMapping("/verificar-email")
+    public ResponseEntity<Object> verificarEmail(@RequestParam String token){
+        return this.userServices.verificarEmail(token);
+    }
+
+    /**
+     * Solicitar recuperación de contraseña
+     * POST /v1/usuarios/recuperar-contrasena
+     * 
+     * @param dto Email del usuario que solicita recuperar contraseña
+     * @return ResponseEntity con mensaje de confirmación
+     */
+    @PostMapping("/recuperar-contrasena")
+    public ResponseEntity<Object> recuperarContrasena(@Valid @RequestBody ForgotPasswordDto dto){
+        return this.userServices.solicitarRecuperacion(dto);
+    }
+
+    /**
+     * Restablecer contraseña con token
+     * POST /v1/usuarios/restablecer-contrasena
+     * 
+     * @param dto Token de recuperación y nueva contraseña
+     * @return ResponseEntity con el resultado de la operación
+     */
+    @PostMapping("/restablecer-contrasena")
+    public ResponseEntity<Object> restablecerContrasena(@Valid @RequestBody ResetPasswordDto dto){
+        return this.userServices.restablecerContrasena(dto);
+    }
+
+    /**
+     * Reenviar correo de verificación
+     * POST /v1/usuarios/reenviar-verificacion?email={email}
+     * 
+     * @param email Email del usuario
+     * @return ResponseEntity con el resultado de la operación
+     */
+    @PostMapping("/reenviar-verificacion")
+    public ResponseEntity<Object> reenviarVerificacion(@RequestParam String email){
+        return this.userServices.reenviarVerificacion(email);
     }
 }

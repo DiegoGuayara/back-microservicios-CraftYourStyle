@@ -11,10 +11,10 @@ import pool from "../config/db-config.js";
 export class CategoriaRepository {
   /** Crea una nueva categoría */
   static async crearCategoria(categoria: CategoriaDto) {
-    const { name } = categoria;
+    const { name, tienda_id } = categoria;
     const [result] = await pool.query(
-      "INSERT INTO categoria (name) VALUES (?)",
-      [name]
+      "INSERT INTO categoria (name, tienda_id) VALUES (?, ?)",
+      [name, tienda_id]
     );
     return result;
   }

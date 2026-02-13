@@ -8,9 +8,10 @@
 5. [API Endpoints](#api-endpoints)
 6. [Autenticación JWT](#autenticación-jwt)
 7. [Seguridad y Encriptación](#seguridad-y-encriptación)
-8. [Métodos Detallados](#métodos-detallados)
-9. [Ejemplos de Uso](#ejemplos-de-uso)
-10. [Comparación con Node.js/Express](#comparación-con-nodejs-express)
+8. [Verificación de Email y Recuperación de Contraseña](#verificación-de-email-y-recuperación-de-contraseña)
+9. [Métodos Detallados](#métodos-detallados)
+10. [Ejemplos de Uso](#ejemplos-de-uso)
+11. [Comparación con Node.js/Express](#comparación-con-nodejs-express)
 
 ---
 
@@ -22,6 +23,8 @@ El microservicio de **Usuarios** es responsable de la gestión de autenticación
 - **Encriptación** de contraseñas con BCrypt
 - **CRUD completo** de usuarios
 - **Validaciones** con Jakarta Bean Validation
+- **Verificación de email** con envío de correo electrónico
+- **Recuperación de contraseña** con token temporal
 
 **Tecnología:** Java + Spring Boot + Spring Security + JWT  
 **Puerto:** 8080  
@@ -47,15 +50,18 @@ usuarios/
 │   │   │   ├── dto/                               # Data Transfer Objects
 │   │   │   │   ├── LoginUserDto.java
 │   │   │   │   ├── RegisterUserDto.java
-│   │   │   │   └── UserResponse.java
+│   │   │   │   ├── UserResponse.java
+│   │   │   │   ├── ForgotPasswordDto.java         # Solicitud recuperación
+│   │   │   │   └── ResetPasswordDto.java          # Restablecer contraseña
 │   │   │   ├── model/                             # Entidades JPA
 │   │   │   │   └── User.java
 │   │   │   ├── repository/                        # Repositorios JPA
 │   │   │   │   └── UserRepository.java
 │   │   │   └── services/                          # Lógica de negocio
-│   │   │       └── UserServices.java
+│   │   │       ├── UserServices.java
+│   │   │       └── EmailService.java              # Servicio de correos
 │   │   └── resources/
-│   │       └── application.properties             # Configuración BD
+│   │       └── application.properties             # Configuración BD y Email
 │   └── test/
 │       └── java/.../                              # Tests
 ├── pom.xml                                         # Dependencias Maven
@@ -96,8 +102,12 @@ public class User {
     private Long id;
     
     private String nombre;
-    private String email;      // ÚNICO
-    private String contraseña;  // Encriptada con BCrypt
+    private String email;              // ÚNICO
+    private String contraseña;          // Encriptada con BCrypt
+    private Boolean emailVerificado;   // Estado de verificación
+    private String tokenVerificacion;  // Token para verificar email
+    private String tokenRecuperacion;  // Token para recuperar contraseña
+    private LocalDateTime fechaExpiracionToken; // Expiración del token
 }
 ```
 
@@ -109,6 +119,10 @@ public class User {
 | **nombre** | VARCHAR(255) | NOT NULL | Nombre completo |
 | **email** | VARCHAR(255) | NOT NULL, UNIQUE | Correo electrónico |
 | **contraseña** | VARCHAR(255) | NOT NULL | Contraseña encriptada |
+| **email_verificado** | BOOLEAN | DEFAULT FALSE | Si el email fue verificado |
+| **token_verificacion** | VARCHAR(255) | NULL | Token UUID para verificar email |
+| **token_recuperacion** | VARCHAR(255) | NULL | Token UUID para recuperar contraseña |
+| **fecha_expiracion_token** | DATETIME | NULL | Fecha de expiración del token |
 
 ---
 
@@ -127,6 +141,10 @@ http://localhost:8080/v1/usuarios
 | GET | `/v1/usuarios/{id}` | Obtener usuario por ID | No |
 | PUT | `/v1/usuarios?email={email}` | Actualizar usuario | No |
 | DELETE | `/v1/usuarios/{id}` | Eliminar usuario | No |
+| GET | `/v1/usuarios/verificar-email?token={token}` | Verificar email del usuario | No |
+| POST | `/v1/usuarios/recuperar-contrasena` | Solicitar recuperación de contraseña | No |
+| POST | `/v1/usuarios/restablecer-contrasena` | Restablecer contraseña con token | No |
+| POST | `/v1/usuarios/reenviar-verificacion?email={email}` | Reenviar correo de verificación | No |
 
 **Nota:** En producción, la mayoría de endpoints deberían requerir autenticación JWT.
 
@@ -235,6 +253,171 @@ public class RegisterUserDto {
 
 ---
 
+## Verificación de Email y Recuperación de Contraseña
+
+### Configuración de Email (SMTP)
+
+Para habilitar el envío de correos, configura las siguientes variables de entorno:
+
+```properties
+# En application.properties (ya configurado)
+spring.mail.host=${MAIL_HOST:smtp.gmail.com}
+spring.mail.port=${MAIL_PORT:587}
+spring.mail.username=${MAIL_USERNAME}
+spring.mail.password=${MAIL_PASSWORD}
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+# URL del frontend para los enlaces en los correos
+app.frontend.url=${FRONTEND_URL:http://localhost:3000}
+```
+
+**Variables de entorno requeridas:**
+
+| Variable | Descripción | Ejemplo |
+|----------|-------------|----------|
+| `MAIL_USERNAME` | Correo remitente | `tucorreo@gmail.com` |
+| `MAIL_PASSWORD` | Contraseña de aplicación | `xxxx xxxx xxxx xxxx` |
+| `FRONTEND_URL` | URL base del frontend | `https://tuapp.com` |
+
+> **⚠️ Importante para Gmail:** Debes generar una "Contraseña de aplicación" en tu cuenta de Google:
+> 1. Ve a [myaccount.google.com](https://myaccount.google.com)
+> 2. Seguridad → Verificación en 2 pasos (activar si no está)
+> 3. Contraseñas de aplicaciones → Generar nueva
+
+---
+
+### Flujo de Verificación de Email
+
+```
+1. Usuario se registra con email
+    ↓
+2. Sistema genera token UUID único
+    ↓
+3. Sistema envía correo con enlace:
+   https://tuapp.com/verificar-email?token=abc123...
+    ↓
+4. Usuario hace clic en el enlace
+    ↓
+5. Frontend llama: GET /v1/usuarios/verificar-email?token=abc123...
+    ↓
+6. Sistema marca emailVerificado = true
+```
+
+---
+
+### Flujo de Recuperación de Contraseña
+
+```
+1. Usuario solicita recuperación con su email
+    ↓
+2. Sistema genera token UUID con expiración (1 hora)
+    ↓
+3. Sistema envía correo con enlace:
+   https://tuapp.com/restablecer-contrasena?token=xyz789...
+    ↓
+4. Usuario hace clic y escribe nueva contraseña
+    ↓
+5. Frontend llama: POST /v1/usuarios/restablecer-contrasena
+   Body: { "token": "xyz789...", "nuevaContraseña": "miNuevaPass" }
+    ↓
+6. Sistema actualiza contraseña y elimina token
+```
+
+---
+
+### 7. Verificar Email
+
+**Endpoint:** `GET /v1/usuarios/verificar-email?token={token}`
+
+**Response exitosa (200 OK):**
+```json
+{
+  "message": "Email verificado exitosamente"
+}
+```
+
+**Response error - Token inválido (400 Bad Request):**
+```json
+{
+  "error": true,
+  "message": "Token de verificación inválido o expirado"
+}
+```
+
+---
+
+### 8. Solicitar Recuperación de Contraseña
+
+**Endpoint:** `POST /v1/usuarios/recuperar-contrasena`
+
+**Request:**
+```json
+{
+  "email": "usuario@example.com"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Si el correo existe, recibirás un enlace para restablecer tu contraseña"
+}
+```
+
+> **Nota de seguridad:** El mensaje es igual si el email existe o no, para no revelar qué emails están registrados.
+
+---
+
+### 9. Restablecer Contraseña
+
+**Endpoint:** `POST /v1/usuarios/restablecer-contrasena`
+
+**Request:**
+```json
+{
+  "token": "abc123-def456-ghi789",
+  "nuevaContraseña": "miNuevaContraseña123"
+}
+```
+
+**Response exitosa (200 OK):**
+```json
+{
+  "message": "Contraseña restablecida exitosamente"
+}
+```
+
+**Response error - Token expirado (400 Bad Request):**
+```json
+{
+  "error": true,
+  "message": "El token ha expirado. Solicita un nuevo enlace de recuperación"
+}
+```
+
+---
+
+### 10. Reenviar Correo de Verificación
+
+**Endpoint:** `POST /v1/usuarios/reenviar-verificacion?email={email}`
+
+**Response exitosa (200 OK):**
+```json
+{
+  "message": "Correo de verificación reenviado"
+}
+```
+
+**Response - Email ya verificado (200 OK):**
+```json
+{
+  "message": "El email ya está verificado"
+}
+```
+
+---
+
 ## Métodos Detallados
 
 ### 1. Registrar Usuario
@@ -263,9 +446,9 @@ public class RegisterUserDto {
     "id": 1,
     "nombre": "Juan Pérez",
     "email": "juan@example.com",
-    "contraseña": "$2a$10$..."
+    "emailVerificado": false
   },
-  "message": "usuario creado"
+  "message": "Usuario creado. Por favor verifica tu correo electrónico."
 }
 ```
 
@@ -895,33 +1078,7 @@ public class TokenResponse {
 }
 ```
 
-### 3. Verificación de Email
-
-Enviar email de confirmación al registrarse:
-
-```java
-@Entity
-public class User {
-    // ... campos existentes
-    
-    private boolean emailVerified = false;
-    private String verificationToken;
-}
-```
-
-### 4. Recuperación de Contraseña
-
-Endpoint para resetear contraseña:
-
-```java
-@PostMapping("/forgot-password")
-public ResponseEntity<?> forgotPassword(@RequestParam String email) {
-    // Generar token temporal
-    // Enviar email con link
-}
-```
-
-### 5. OAuth2 (Google, Facebook)
+### 3. OAuth2 (Google, Facebook)
 
 Permitir login con redes sociales:
 
