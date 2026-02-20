@@ -1,17 +1,31 @@
-from mirascope.google import gemini_call
-from typing import List, Optional
+from dataclasses import dataclass
+from typing import Optional
+
+import google.generativeai as genai
+
 from app.config.settings import settings
-import os
 
-# Configurar la API key de Gemini
-os.environ["GOOGLE_API_KEY"] = settings.GEMINI_API_KEY
+MODEL_NAME = "gemini-1.5-flash"
+genai.configure(api_key=settings.GEMINI_API_KEY)
+_model = genai.GenerativeModel(MODEL_NAME)
 
 
-@gemini_call("gemini-1.5-flash")
+@dataclass
+class AgentResponse:
+    content: str
+
+
+async def _generate_text(prompt: str) -> AgentResponse:
+    response = _model.generate_content(prompt)
+    text = (getattr(response, "text", None) or "").strip()
+    if not text:
+        text = "No se pudo generar una respuesta en este momento."
+    return AgentResponse(content=text)
+
+
 async def fashion_agent(
-    user_message: str,
-    context: Optional[str] = None
-) -> str:
+    user_message: str, context: Optional[str] = None
+) -> AgentResponse:
     """
     Agente principal de moda y personalización
     
@@ -22,7 +36,7 @@ async def fashion_agent(
     Returns:
         Respuesta del modelo
     """
-    return f"""
+    prompt = f"""
     SYSTEM:
     Eres un asistente de IA experto en moda y personalización de prendas para CraftYourStyle.
     
@@ -45,13 +59,13 @@ async def fashion_agent(
     USER:
     {user_message}
     """
+    return await _generate_text(prompt)
 
 
-@gemini_call("gemini-1.5-flash")
 async def generate_design_prompt(
     user_request: str,
     garment_type: str = "camiseta"
-) -> str:
+) -> AgentResponse:
     """
     Genera un prompt optimizado para Stable Diffusion
     
@@ -62,7 +76,7 @@ async def generate_design_prompt(
     Returns:
         Prompt optimizado para generación de imágenes
     """
-    return f"""
+    prompt = f"""
     SYSTEM:
     Eres un experto en describir diseños para prendas de vestir.
     Genera descripciones detalladas en inglés para modelos de generación de imágenes (Stable Diffusion).
@@ -78,10 +92,10 @@ async def generate_design_prompt(
     El usuario quiere: {user_request}
     Tipo de prenda: {garment_type}
     """
+    return await _generate_text(prompt)
 
 
-@gemini_call("gemini-1.5-flash")
-async def analyze_user_image(image_url: str) -> str:
+async def analyze_user_image(image_url: str) -> AgentResponse:
     """
     Analiza una imagen subida por el usuario
     
@@ -91,7 +105,7 @@ async def analyze_user_image(image_url: str) -> str:
     Returns:
         Descripción detallada de la imagen
     """
-    return f"""
+    prompt = f"""
     SYSTEM:
     Analiza la siguiente imagen y describe qué ves.
     Enfócate en elementos que puedan ser utilizados para personalizar prendas:
@@ -105,3 +119,4 @@ async def analyze_user_image(image_url: str) -> str:
     
     Describe esta imagen en detalle para que pueda ser usada en personalización de prendas.
     """
+    return await _generate_text(prompt)
