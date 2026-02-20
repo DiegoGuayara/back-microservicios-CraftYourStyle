@@ -12,11 +12,14 @@ class TipoMensaje(str, enum.Enum):
     Enum que define quién envió el mensaje
     
     Valores:
-    - USUARIO: Mensaje enviado por el usuario humano
-    - IA: Mensaje enviado por el agente de inteligencia artificial
+    - usuario: Mensaje enviado por el usuario humano
+    - ia: Mensaje enviado por el agente de inteligencia artificial
+    
+    Nota: Los nombres están en minúscula para coincidir con los valores
+    almacenados en la base de datos MySQL.
     """
-    USUARIO = "usuario"  # Mensaje del usuario
-    IA = "ia"  # Respuesta del agente IA
+    usuario = "usuario"  # Mensaje del usuario
+    ia = "ia"  # Respuesta del agente IA
 
 
 # ==================== MODELO DE MENSAJE ====================
@@ -36,7 +39,7 @@ class MensajeIA(Base):
         # Guardar mensaje del usuario
         mensaje = MensajeIA(
             sesion_id=1,
-            tipo=TipoMensaje.USUARIO,
+            tipo=TipoMensaje.usuario,
             contenido="Quiero una camiseta azul",
             metadata={"imagenes": ["https://..."]}
         )
@@ -69,13 +72,14 @@ class MensajeIA(Base):
     # Text permite mensajes largos (más que VARCHAR)
     contenido = Column(Text, nullable=False)
     
-    # Metadata adicional en formato JSON
+    # Datos adicionales en formato JSON
     # Puede contener:
     # - URLs de imágenes adjuntas
     # - Información de productos mencionados
     # - Configuraciones de personalización
     # Ejemplo: {"imagenes": ["url1", "url2"], "producto_id": 5}
-    metadata = Column(JSON, nullable=True)
+    # NOTA: No usar "metadata" porque es reservado en SQLAlchemy
+    datos_extra = Column("metadata", JSON, nullable=True)
     
     # Timestamp: cuándo se envió el mensaje
     # Se guarda automáticamente al crear el mensaje

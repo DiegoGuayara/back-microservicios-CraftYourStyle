@@ -20,11 +20,14 @@ class EstadoSesion(str, enum.Enum):
     Hereda de enum.Enum para tener validación de tipo
     
     Estados:
-    - ACTIVA: La sesión está en curso, el usuario está chateando
-    - FINALIZADA: La sesión terminó, el usuario cerró el chat
+    - activa: La sesión está en curso, el usuario está chateando
+    - finalizada: La sesión terminó, el usuario cerró el chat
+    
+    Nota: Los nombres están en minúscula para coincidir con los valores
+    almacenados en la base de datos MySQL.
     """
-    ACTIVA = "activa"  # Sesión en curso
-    FINALIZADA = "finalizada"  # Sesión terminada
+    activa = "activa"  # Sesión en curso
+    finalizada = "finalizada"  # Sesión terminada
 
 
 # ==================== MODELO DE SESIÓN ====================
@@ -48,7 +51,7 @@ class SesionIA(Base):
         
         # Buscar sesiones activas
         sesiones = db.query(SesionIA).filter(
-            SesionIA.estado == EstadoSesion.ACTIVA
+            SesionIA.estado == EstadoSesion.activa
         ).all()
     """
     # Nombre de la tabla en MySQL
@@ -74,7 +77,7 @@ class SesionIA(Base):
     # Estado actual de la sesión (activa o finalizada)
     # Usa el enum EstadoSesion definido arriba
     # Por defecto es ACTIVA cuando se crea
-    estado = Column(Enum(EstadoSesion), default=EstadoSesion.ACTIVA)
+    estado = Column(Enum(EstadoSesion), default=EstadoSesion.activa)
     
     # ==================== RELACIONES ====================
     

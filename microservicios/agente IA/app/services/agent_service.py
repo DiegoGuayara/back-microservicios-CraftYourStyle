@@ -28,7 +28,7 @@ class AgentService:
         """Obtiene la sesión activa del usuario"""
         return db.query(SesionIA).filter(
             SesionIA.id_user == id_user,
-            SesionIA.estado == EstadoSesion.ACTIVA
+            SesionIA.estado == EstadoSesion.activa
         ).first()
     
     @staticmethod
@@ -36,7 +36,7 @@ class AgentService:
         """Cierra una sesión"""
         sesion = db.query(SesionIA).filter(SesionIA.id == sesion_id).first()
         if sesion:
-            sesion.estado = EstadoSesion.FINALIZADA
+            sesion.estado = EstadoSesion.finalizada
             sesion.fecha_fin = datetime.utcnow()
             db.commit()
             return True
@@ -91,7 +91,7 @@ class AgentService:
         # Guardar mensaje del usuario
         metadata = {"imagenes": imagenes} if imagenes else None
         await AgentService.save_message(
-            db, sesion_id, TipoMensaje.USUARIO, user_message, metadata
+            db, sesion_id, TipoMensaje.usuario, user_message, metadata
         )
         
         # Obtener historial para contexto
@@ -100,7 +100,7 @@ class AgentService:
         
         # Construir contexto
         context = "\n".join([
-            f"{'Usuario' if msg.tipo == TipoMensaje.USUARIO else 'Asistente'}: {msg.contenido}"
+            f"{'Usuario' if msg.tipo == TipoMensaje.usuario else 'Asistente'}: {msg.contenido}"
             for msg in historial[:-1]  # Excluir el mensaje actual
         ]) if len(historial) > 1 else "Primera interacción"
         
@@ -125,7 +125,7 @@ class AgentService:
         
         # Guardar respuesta del agente
         await AgentService.save_message(
-            db, sesion_id, TipoMensaje.IA, respuesta_texto
+            db, sesion_id, TipoMensaje.ia, respuesta_texto
         )
         
         return respuesta_texto

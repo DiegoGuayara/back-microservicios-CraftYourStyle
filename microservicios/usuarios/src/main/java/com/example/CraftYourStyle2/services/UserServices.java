@@ -149,6 +149,7 @@ public class UserServices {
             user.setContraseña(null);
 
             respuesta.put("token", token);
+            respuesta.put("id", user.getId());
             respuesta.put("usuario", user.getEmail());
             respuesta.put("message", "Login exitoso");
 
