@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     # ==================== API DE INTELIGENCIA ARTIFICIAL ====================
     # Gemini (Google AI) - Para el agente conversacional de IA
     GEMINI_API_KEY: str  # API key de Google Gemini (obligatorio)
+    IMAGEN_MODEL: str = "imagen-4.0-generate-001"  # Modelo por defecto para generación de imágenes
+    IMAGEN_FALLBACK_MODELS: str = "imagen-4.0-fast-generate-001,imagen-3.0-generate-002"  # Fallbacks separados por coma
     
     # ==================== ALMACENAMIENTO DE IMÁGENES ====================
     # Cloudinary - Servicio en la nube para almacenar imágenes
@@ -86,3 +88,4 @@ class Settings(BaseSettings):
 # Crea una instancia única de Settings que se usará en toda la aplicación
 # Al crearla, Pydantic automáticamente lee el archivo .env y carga todas las variables
 settings = Settings()
+

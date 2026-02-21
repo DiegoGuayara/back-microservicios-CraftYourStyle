@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from app.models import SesionIA, MensajeIA, TipoMensaje, EstadoSesion
 from app.agents import fashion_agent
 from app.agents.orchestrator import orchestrator
+from app.services.design_generation_service import DesignGenerationService
 from typing import List, Optional, Dict
 from datetime import datetime
 import json
@@ -105,16 +106,53 @@ class AgentService:
             for msg in historial[:-1]  # Excluir el mensaje actual
         ]) if len(historial) > 1 else "Primera interacción"
         
+        # Detectar si el usuario quiere ver una imagen generada
+        should_generate = await DesignGenerationService.should_generate_image(user_message)
+        
         # Llamar al orquestador de Mirascope 2.2.2
         # El orquestador maneja automáticamente el análisis de imágenes
         try:
-            response = await orchestrator.orchestrate(
-                user_message=user_message,
-                context=context,
-                images=imagenes,
-                intent="general"
-            )
-            respuesta_texto = response.content
+            if should_generate:
+                # Primero, generar el prompt optimizado
+                design_prompt_response = await orchestrator.generate_design_prompt(
+                    user_request=user_message,
+                    garment_type="camiseta"  # Puede ser dinámico
+                )
+                design_prompt = orchestrator._extract_text(design_prompt_response)
+                
+                # Generar la imagen
+                try:
+                    image_url = await DesignGenerationService.generate_design_image(
+                        prompt=design_prompt
+                    )
+                    
+                    # Generar respuesta del agente con la imagen
+                    response = await orchestrator.fashion_agent(
+                        user_message=f"Usuario pidió: {user_message}. Se generó la imagen: {image_url}",
+                        context=context
+                    )
+                    respuesta_texto = orchestrator._extract_text(response)
+                    
+                    # Añadir la URL de la imagen a la respuesta
+                    respuesta_texto += f"\n\n¡Aquí está tu diseño! 🎉\n{image_url}"
+                    
+                except Exception as img_error:
+                    # Si falla la generación, avisar al usuario
+                    response = await orchestrator.fashion_agent(
+                        user_message=user_message,
+                        context=context
+                    )
+                    respuesta_texto = orchestrator._extract_text(response)
+                    respuesta_texto += f"\n\n(Nota: No pude generar la imagen: {str(img_error)})"
+            else:
+                # Flujo normal sin generación de imagen
+                response = await orchestrator.orchestrate(
+                    user_message=user_message,
+                    context=context,
+                    images=imagenes,
+                    intent="general"
+                )
+                respuesta_texto = response.content
         except Exception as e:
             respuesta_texto = f"Lo siento, hubo un error al procesar tu mensaje: {str(e)}"
         
