@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models import SesionIA, MensajeIA, TipoMensaje, EstadoSesion
-from app.agents import fashion_agent, analyze_user_image
+from app.agents import fashion_agent
+from app.agents.orchestrator import orchestrator
 from typing import List, Optional, Dict
 from datetime import datetime
 import json
@@ -104,21 +105,15 @@ class AgentService:
             for msg in historial[:-1]  # Excluir el mensaje actual
         ]) if len(historial) > 1 else "Primera interacción"
         
-        # Analizar imágenes si las hay
-        if imagenes:
-            image_analyses = []
-            for img_url in imagenes:
-                try:
-                    analysis = await analyze_user_image(img_url)
-                    image_analyses.append(analysis.content)
-                except Exception as e:
-                    image_analyses.append(f"No se pudo analizar la imagen: {str(e)}")
-            
-            context += "\n\nImágenes adjuntas:\n" + "\n".join(image_analyses)
-        
-        # Llamar al agente
+        # Llamar al orquestador de Mirascope 2.2.2
+        # El orquestador maneja automáticamente el análisis de imágenes
         try:
-            response = await fashion_agent(user_message, context)
+            response = await orchestrator.orchestrate(
+                user_message=user_message,
+                context=context,
+                images=imagenes,
+                intent="general"
+            )
             respuesta_texto = response.content
         except Exception as e:
             respuesta_texto = f"Lo siento, hubo un error al procesar tu mensaje: {str(e)}"

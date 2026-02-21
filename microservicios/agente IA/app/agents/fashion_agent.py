@@ -1,33 +1,25 @@
+"""
+Fashion Agent - Migrado a Mirascope 2.2.2
+
+Este módulo ahora exporta funciones que utilizan el orquestador de Mirascope.
+Mantiene la misma interfaz para compatibilidad con el código existente.
+"""
 from dataclasses import dataclass
 from typing import Optional
-
-import google.generativeai as genai
-
-from app.config.settings import settings
-
-MODEL_NAME = "gemini-1.5-flash"
-genai.configure(api_key=settings.GEMINI_API_KEY)
-_model = genai.GenerativeModel(MODEL_NAME)
+from app.agents.orchestrator import orchestrator, AgentResponse
 
 
-@dataclass
-class AgentResponse:
-    content: str
-
-
-async def _generate_text(prompt: str) -> AgentResponse:
-    response = _model.generate_content(prompt)
-    text = (getattr(response, "text", None) or "").strip()
-    if not text:
-        text = "No se pudo generar una respuesta en este momento."
-    return AgentResponse(content=text)
+# Re-exportar AgentResponse para compatibilidad
+__all__ = ['AgentResponse', 'fashion_agent', 'generate_design_prompt', 'analyze_user_image']
 
 
 async def fashion_agent(
-    user_message: str, context: Optional[str] = None
+    user_message: str, 
+    context: Optional[str] = None
 ) -> AgentResponse:
     """
     Agente principal de moda y personalización
+    Ahora usa el orquestador de Mirascope 2.2.2
     
     Args:
         user_message: Mensaje del usuario
@@ -36,30 +28,11 @@ async def fashion_agent(
     Returns:
         Respuesta del modelo
     """
-    prompt = f"""
-    SYSTEM:
-    Eres un asistente de IA experto en moda y personalización de prendas para CraftYourStyle.
-    
-    Tus responsabilidades son:
-    1. Ayudar a los usuarios a personalizar prendas (añadir diseños, logos, texto)
-    2. Sugerir combinaciones de colores y estilos
-    3. Recomendar outfits completos
-    4. Procesar imágenes que el usuario envía para personalización
-    5. Guiar en el proceso de virtual try-on
-    
-    Debes ser:
-    - Amigable y creativo
-    - Claro en tus explicaciones
-    - Proactivo sugiriendo ideas
-    - Experto en tendencias de moda
-    
-    Contexto del usuario:
-    {context or 'No hay contexto previo'}
-    
-    USER:
-    {user_message}
-    """
-    return await _generate_text(prompt)
+    return await orchestrator.orchestrate(
+        user_message=user_message,
+        context=context,
+        intent="general"
+    )
 
 
 async def generate_design_prompt(
@@ -68,6 +41,7 @@ async def generate_design_prompt(
 ) -> AgentResponse:
     """
     Genera un prompt optimizado para Stable Diffusion
+    Ahora usa el orquestador de Mirascope 2.2.2
     
     Args:
         user_request: Lo que el usuario quiere en la prenda
@@ -76,28 +50,17 @@ async def generate_design_prompt(
     Returns:
         Prompt optimizado para generación de imágenes
     """
-    prompt = f"""
-    SYSTEM:
-    Eres un experto en describir diseños para prendas de vestir.
-    Genera descripciones detalladas en inglés para modelos de generación de imágenes (Stable Diffusion).
-    
-    La descripción debe ser técnica y específica, incluyendo:
-    - Tipo de prenda
-    - Colores
-    - Estilo del diseño
-    - Posición del diseño
-    - Detalles adicionales
-    
-    USER:
-    El usuario quiere: {user_request}
-    Tipo de prenda: {garment_type}
-    """
-    return await _generate_text(prompt)
+    response = await orchestrator.generate_design_prompt(
+        user_request=user_request,
+        garment_type=garment_type
+    )
+    return AgentResponse(content=response.content)
 
 
 async def analyze_user_image(image_url: str) -> AgentResponse:
     """
     Analiza una imagen subida por el usuario
+    Ahora usa el orquestador de Mirascope 2.2.2
     
     Args:
         image_url: URL de la imagen a analizar
@@ -105,18 +68,5 @@ async def analyze_user_image(image_url: str) -> AgentResponse:
     Returns:
         Descripción detallada de la imagen
     """
-    prompt = f"""
-    SYSTEM:
-    Analiza la siguiente imagen y describe qué ves.
-    Enfócate en elementos que puedan ser utilizados para personalizar prendas:
-    - Logos
-    - Patrones
-    - Colores dominantes
-    - Estilo visual
-    
-    USER:
-    {image_url}
-    
-    Describe esta imagen en detalle para que pueda ser usada en personalización de prendas.
-    """
-    return await _generate_text(prompt)
+    response = await orchestrator.analyze_image(image_url=image_url)
+    return AgentResponse(content=response.content)

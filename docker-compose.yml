@@ -47,7 +47,7 @@ services:
 
   agente-ia:
     build:
-      context: ./microservicios/agente IA
+      context: "./microservicios/agente IA"
       dockerfile: Dockerfile
     ports:
       - "10105:10105"
