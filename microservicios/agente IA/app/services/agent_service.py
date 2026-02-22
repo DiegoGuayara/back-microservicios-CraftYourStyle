@@ -3,13 +3,18 @@ from app.models import SesionIA, MensajeIA, TipoMensaje, EstadoSesion
 from app.agents import fashion_agent
 from app.agents.orchestrator import orchestrator
 from app.services.design_generation_service import DesignGenerationService
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 import json
+import re
 
 
 class AgentService:
     """Servicio para manejar la lógica del agente de IA"""
+    IMAGE_URL_PATTERN = re.compile(
+        r"https?://[^\s]+(?:cloudinary\.com[^\s]*|(?:\.png|\.jpg|\.jpeg|\.webp|\.gif)(?:\?[^\s]*)?)",
+        re.IGNORECASE,
+    )
     
     @staticmethod
     async def create_session(db: Session, id_user: int) -> SesionIA:
@@ -77,7 +82,7 @@ class AgentService:
         sesion_id: int,
         user_message: str,
         imagenes: Optional[List[str]] = None
-    ) -> str:
+    ) -> Dict[str, Any]:
         """
         Procesa un mensaje del usuario y genera respuesta del agente
         
@@ -88,7 +93,7 @@ class AgentService:
             imagenes: URLs de imágenes adjuntas
             
         Returns:
-            Respuesta del agente
+            Dict con respuesta de texto y URLs de imágenes detectadas/generadas
         """
         # Guardar mensaje del usuario
         metadata = {"imagenes": imagenes} if imagenes else None
@@ -108,6 +113,7 @@ class AgentService:
         
         # Detectar si el usuario quiere ver una imagen generada
         should_generate = await DesignGenerationService.should_generate_image(user_message)
+        imagenes_generadas: List[str] = []
         
         # Llamar al orquestador de Mirascope 2.2.2
         # El orquestador maneja automáticamente el análisis de imágenes
@@ -135,6 +141,7 @@ class AgentService:
                     
                     # Añadir la URL de la imagen a la respuesta
                     respuesta_texto += f"\n\n¡Aquí está tu diseño! 🎉\n{image_url}"
+                    imagenes_generadas = [image_url]
                     
                 except Exception as img_error:
                     # Si falla la generación, avisar al usuario
@@ -153,12 +160,17 @@ class AgentService:
                     intent="general"
                 )
                 respuesta_texto = response.content
+                imagenes_generadas = AgentService.IMAGE_URL_PATTERN.findall(respuesta_texto)
         except Exception as e:
             respuesta_texto = f"Lo siento, hubo un error al procesar tu mensaje: {str(e)}"
         
         # Guardar respuesta del agente
+        ia_metadata = {"imagenes_generadas": imagenes_generadas} if imagenes_generadas else None
         await AgentService.save_message(
-            db, sesion_id, TipoMensaje.ia, respuesta_texto
+            db, sesion_id, TipoMensaje.ia, respuesta_texto, ia_metadata
         )
-        
-        return respuesta_texto
+
+        return {
+            "mensaje": respuesta_texto,
+            "imagenes_generadas": imagenes_generadas or None
+        }

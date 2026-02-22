@@ -90,6 +90,6 @@ async def send_message(
     
     return ChatResponse(
         sesion_id=sesion_id,
-        mensaje=respuesta,
-        imagenes_generadas=None  # TODO: Implementar generación de imágenes
+        mensaje=respuesta["mensaje"],
+        imagenes_generadas=respuesta.get("imagenes_generadas")
     )
