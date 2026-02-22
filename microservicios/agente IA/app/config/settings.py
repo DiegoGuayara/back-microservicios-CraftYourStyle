@@ -47,7 +47,11 @@ class Settings(BaseSettings):
     # ==================== MODELOS DE MACHINE LEARNING ====================
     # Banana - Plataforma para ejecutar modelos de ML
     # Usado para Virtual Try-On (probarse prendas virtualmente)
-    BANANA_API_KEY: Optional[str] = None  # API key de Banana
+    BANANA_API_KEY: Optional[str] = None
+    
+    # Replicate - Plataforma para ejecutar modelos de IA
+    # Usado para generar imágenes de diseños de prendas
+    REPLICATE_API_TOKEN: Optional[str] = None
     
     # ==================== MENSAJERÍA ENTRE MICROSERVICIOS ====================
     # RabbitMQ - Sistema de colas para comunicación asíncrona entre microservicios
