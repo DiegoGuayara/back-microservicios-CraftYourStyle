@@ -4,11 +4,12 @@ FROM node:18
 ENV NODE_ENV=development
 WORKDIR /app
 
-COPY package*.json ./
+# Build context: raíz del repo (Render monorepo)
+COPY microservicios/pagos/package*.json ./
 RUN npm install
 
-COPY . .
+COPY microservicios/pagos/ ./
 RUN npm run build
 
-EXPOSE 3000
+EXPOSE 10103
 CMD ["npm", "start"]
