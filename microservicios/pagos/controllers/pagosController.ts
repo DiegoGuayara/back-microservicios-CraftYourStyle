@@ -81,41 +81,60 @@ export class PagosController {
         return;
       }
 
-      const preferenceResult = await mpPreference.create({
-        body: {
-          items: [
-            {
-              id: externalReference,
-              title: body.title,
-              quantity: body.quantity,
-              unit_price: body.unitPrice,
-              currency_id: body.currency,
-            },
-          ],
-          external_reference: externalReference,
-          payer: body.email ? { email: body.email } : undefined,
-          notification_url: `${process.env.PAGOS_PUBLIC_BASE_URL || "http://localhost:10103"}/pagos/webhook`,
-          back_urls: {
-            success: process.env.CHECKOUT_SUCCESS_URL || "http://localhost:3000/pago/success",
-            pending: process.env.CHECKOUT_PENDING_URL || "http://localhost:3000/pago/pending",
-            failure: process.env.CHECKOUT_FAILURE_URL || "http://localhost:3000/pago/failure",
+      const preferenceBody = {
+        items: [
+          {
+            id: externalReference,
+            title: body.title,
+            quantity: body.quantity,
+            unit_price: body.unitPrice,
+            currency_id: body.currency,
           },
-          auto_return: "approved",
+        ],
+        external_reference: externalReference,
+        notification_url: `${process.env.PAGOS_PUBLIC_BASE_URL || "http://localhost:10103"}/pagos/webhook`,
+        back_urls: {
+          success: process.env.CHECKOUT_SUCCESS_URL || "http://localhost:3000/pago/success",
+          pending: process.env.CHECKOUT_PENDING_URL || "http://localhost:3000/pago/pending",
+          failure: process.env.CHECKOUT_FAILURE_URL || "http://localhost:3000/pago/failure",
         },
+        auto_return: "approved" as const,
+      };
+
+      const preferenceRequest = body.email
+        ? { ...preferenceBody, payer: { email: body.email } }
+        : preferenceBody;
+
+      const preferenceResult = await mpPreference.create({
+        body: preferenceRequest,
       });
 
-      await PagosRepository.upsertPaymentIntent({
+      const paymentIntentInput: {
+        order_id: string;
+        user_id: number;
+        external_reference: string;
+        amount: number;
+        currency: CreatePreferenceDto["currency"];
+        status: string;
+        idempotency_key: string;
+        mp_preference_id?: string;
+        init_point?: string;
+        sandbox_init_point?: string;
+      } = {
         order_id: body.orderId,
         user_id: body.userId,
         external_reference: externalReference,
         amount: body.unitPrice * body.quantity,
         currency: body.currency,
         status: "preference_created",
-        mp_preference_id: preferenceResult.id,
-        init_point: preferenceResult.init_point,
-        sandbox_init_point: preferenceResult.sandbox_init_point,
         idempotency_key: idempotencyKey,
-      });
+      };
+
+      if (preferenceResult.id) paymentIntentInput.mp_preference_id = preferenceResult.id;
+      if (preferenceResult.init_point) paymentIntentInput.init_point = preferenceResult.init_point;
+      if (preferenceResult.sandbox_init_point) paymentIntentInput.sandbox_init_point = preferenceResult.sandbox_init_point;
+
+      await PagosRepository.upsertPaymentIntent(paymentIntentInput);
 
       res.status(201).json({
         externalReference,
@@ -192,7 +211,19 @@ export class PagosController {
 
   static async getStatusByExternalReference(req: Request, res: Response): Promise<void> {
     try {
-      const { externalReference } = req.params;
+      const externalReferenceParam = req.params.externalReference;
+      const externalReference =
+        typeof externalReferenceParam === "string"
+          ? externalReferenceParam
+          : Array.isArray(externalReferenceParam)
+            ? externalReferenceParam[0]
+            : undefined;
+
+      if (!externalReference) {
+        res.status(400).json({ message: "externalReference es requerido" });
+        return;
+      }
+
       const result = await PagosRepository.findByExternalReference(externalReference);
 
       if (!result) {
