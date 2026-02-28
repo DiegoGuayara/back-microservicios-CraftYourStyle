@@ -26,6 +26,8 @@ public class User {
     private String nombre;
     private String email;
     private String contraseña;
+    @Column(name = "role")
+    private String role = "USER";
     
     @Column(name = "email_verificado")
     private Boolean emailVerificado = false;
@@ -47,6 +49,7 @@ public class User {
         this.nombre = nombre;
         this.email = email;
         this.contraseña = contraseña;
+        this.role = "USER";
         this.emailVerificado = false;
     }
 
@@ -80,6 +83,14 @@ public class User {
 
     public void setContraseña(String contraseña) {
         this.contraseña = contraseña;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 
     public Boolean getEmailVerificado() {

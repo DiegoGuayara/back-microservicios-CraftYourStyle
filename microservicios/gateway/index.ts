@@ -63,6 +63,10 @@ const routes = {
     target: process.env.USUARIOS_URL || "http://usuarios:8080",
     pathRewrite: { "^/api/usuarios": "" }, // Remueve /api/usuarios del path
   },
+  "/api/admin": {
+    target: process.env.ADMIN_URL || "http://admin:3000",
+    pathRewrite: { "^/api/admin": "/admin" }, // /api/admin/x -> /admin/x
+  },
 };
 
 /**

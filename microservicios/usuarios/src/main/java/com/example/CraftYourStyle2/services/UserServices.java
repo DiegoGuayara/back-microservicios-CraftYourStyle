@@ -82,6 +82,7 @@ public class UserServices {
             user.setNombre(dto.getNombre());
             user.setEmail(dto.getEmail());
             user.setContraseña(dto.getContraseña());
+            user.setRole("USER");
 
             // Encriptar contraseña con BCrypt
             user.setContraseña(passwordEncoder.encode(dto.getContraseña()));
@@ -143,7 +144,7 @@ public class UserServices {
             }
 
             // Generar token JWT
-            String token = jwtUtil.generarToken(user.getEmail());
+            String token = jwtUtil.generarToken(user.getEmail(), user.getRole());
 
             // Remover contraseña de la respuesta por seguridad
             user.setContraseña(null);
@@ -151,6 +152,7 @@ public class UserServices {
             respuesta.put("token", token);
             respuesta.put("id", user.getId());
             respuesta.put("usuario", user.getEmail());
+            respuesta.put("role", user.getRole());
             respuesta.put("message", "Login exitoso");
 
             return new ResponseEntity<>(respuesta, HttpStatus.OK);
