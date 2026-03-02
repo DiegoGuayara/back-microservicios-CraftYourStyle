@@ -83,7 +83,6 @@ services:
     depends_on:
       - usuarios
       - transacciones
-      - personalizacion
       - catalogo
       - notificaciones
       - agente-ia
@@ -96,25 +95,6 @@ services:
       - "10101"
     env_file:
       - ./microservicios/transacciones/.env
-    environment:
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USER: guest
-      RABBITMQ_PASSWORD: guest
-    networks:
-      - microservices-network
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-
-  personalizacion:
-    build:
-      context: ./microservicios/personalizacion
-      dockerfile: Dockerfile
-    expose:
-      - "10102"
-    env_file:
-      - ./microservicios/personalizacion/.env
     environment:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
