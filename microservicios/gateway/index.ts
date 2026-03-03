@@ -47,6 +47,10 @@ const routes = {
     target: process.env.TRANSACCIONES_URL || "http://transacciones:10101",
     pathRewrite: { "^/api/transacciones": "" }, // Remueve /api/transacciones del path
   },
+  "/api/agente-ia": {
+    target: process.env.AGENTE_IA_URL || "http://agente-ia:10105",
+    pathRewrite: { "^/api/agente-ia": "" }, // Remueve /api/agente-ia del path
+  },
   "/api/catalogo": {
     target: process.env.CATALOGO_URL || "http://catalogo:10103",
     pathRewrite: { "^/api/catalogo": "" }, // Remueve /api/catalogo del path

@@ -22,10 +22,10 @@ class Settings(BaseSettings):
     # ==================== CONFIGURACIÓN DE BASE DE DATOS ====================
     # Estas variables definen cómo conectarse a la base de datos MySQL
     
-    DB_HOST: str = "localhost"  # Host donde corre MySQL (localhost en desarrollo)
+    DB_HOST: str = "host.docker.internal"  # Host donde corre Docker (host.docker.internal en desarrollo)
     DB_USER: str = "root"  # Usuario de la base de datos
     DB_PASSWORD: str = ""  # Contraseña (vacía por defecto en desarrollo)
-    DB_NAME: str = "CraftYourStyle_Personalizacion"  # Nombre de la base de datos
+    DB_NAME: str = "CraftYourStyle_AgenteIA"  # Nombre de la base de datos
     DB_PORT: int = 3306  # Puerto de MySQL (3306 es el estándar)
     
     # ==================== CONFIGURACIÓN DEL SERVIDOR ====================

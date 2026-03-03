@@ -49,8 +49,8 @@ services:
     build:
       context: "./microservicios/agente IA"
       dockerfile: Dockerfile
-    ports:
-      - "10105:10105"
+    expose:
+      - "10105"
     env_file:
       - ./microservicios/agente IA/.env
     environment:
