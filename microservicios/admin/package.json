@@ -5,6 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "dev": "tsx watch index.ts",
+    "start": "tsx index.ts",
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -20,5 +23,8 @@
     "jsonwebtoken": "^9.0.3",
     "jwt-decode": "^4.0.0",
     "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6"
   }
 }
