@@ -1,10 +1,13 @@
 import express from 'express'
 import dotenv from 'dotenv'
 import adminRoutes from './routes/admin.routes.js'
+import cors from 'cors'
+
 
 dotenv.config()
 
 const app = express()
+app.use(cors())
 app.use('/admin', adminRoutes)
 app.use(express.json())
 
