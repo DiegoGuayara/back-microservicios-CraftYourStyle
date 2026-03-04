@@ -13,18 +13,17 @@ export class CatalogoController {
   /** POST /catalogo/crearCategoria - Crea una nueva categoría */
   static async crearCategoria(req: Request, res: Response) {
     try {
-      const { name, tienda_id } = req.body;
+      const { nombre } = req.body;
 
-      if (!name || !tienda_id) {
+      if (!nombre) {
         res.status(400).json({
-          message: "Faltan datos obligatorios (name y tienda_id son requeridos)",
+          message: "Faltan datos obligatorios (nombre es requerido)",
         });
         return;
       }
 
       const nuevaCategoria: CategoriaDto = {
-        name,
-        tienda_id,
+        nombre,
       };
 
       const resultado = await CategoriaRepository.crearCategoria(
@@ -135,9 +134,9 @@ export class CatalogoController {
   static async actualizarCategoriaPorId(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { name } = req.body;
+      const { nombre } = req.body;
 
-      if (!name || !id) {
+      if (!nombre || !id) {
         res.status(400).json({
           message: "Faltan datos obligatorios por ingresar",
         });
@@ -146,7 +145,7 @@ export class CatalogoController {
 
       const resultado = await CategoriaRepository.actualizarCategoriaPorId(
         Number(id),
-        name
+        nombre
       );
 
       if (!resultado) {

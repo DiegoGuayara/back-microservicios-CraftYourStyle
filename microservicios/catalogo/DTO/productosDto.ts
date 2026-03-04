@@ -2,10 +2,11 @@ import { IsOptional } from "class-validator";
 export class ProductosDto {
   id?: number;
   nombre: string = "";
-  descripcion: string = "";
-  imagen: string = "";
-  category_id: number = 0;
-  tienda_id: number = 0;
+  imagen_url?: string;
+  descripcion?: string;
+  categoria_id: number = 0;
+  price: number = 0;
+  talla: string = "";
 
   @IsOptional()
   created_at?: Date;

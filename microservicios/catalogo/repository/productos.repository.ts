@@ -15,19 +15,28 @@ export class ProductosRepository{
      * @param producto - Objeto ProductosDto que contiene:
      *   - nombre: Nombre del producto
      *   - descripcion: Descripción detallada del producto
-     *   - imagen: URL de la imagen del producto
-     *   - category_id: ID de la categoría a la que pertenece
-     *   - tienda_id: ID de la tienda dueña del producto
+     *   - imagen_url: URL de la imagen del producto
+     *   - categoria_id: ID de la categoría a la que pertenece
+     *   - precio: Precio del producto
+     *   - talla: Talla del producto
      * 
      * @returns Objeto con el resultado de la inserción (incluye insertId)
      * 
      * Nota: Los campos created_at y updated_at se generan automáticamente en la BD
      */
     static async crearProducto(producto: ProductosDto){
-        const {nombre, descripcion, imagen, category_id, tienda_id} = producto;
+        const {nombre, descripcion, imagen_url, categoria_id, price, talla} = producto;
         const [result] = await pool.query(
-            "INSERT INTO productos (name, description, imagen, category_id, tienda_id) VALUES (?, ?, ?, ?, ?)",
-            [nombre, descripcion, imagen, category_id, tienda_id]
+            "INSERT INTO productos (nombre, image_url, descripcion, category_id, price, talla) VALUES (?, ?, ?, ?, ?, ?)",
+            [nombre, imagen_url ?? null, descripcion ?? null, categoria_id, price, talla]
+        );
+        return result;
+    }
+
+    static async crearVerificacionPrenda(producto_id: number, existencias: string) {
+        const [result] = await pool.query(
+            "INSERT INTO verificacionPrenda (stock, producto_id) VALUES (?, ?)",
+            [existencias, producto_id]
         );
         return result;
     }
@@ -38,7 +47,7 @@ export class ProductosRepository{
      * @returns Array con todos los productos (solo datos básicos de la tabla productos)
      * 
      * Nota: Este método NO incluye información de categorías, tiendas ni variantes.
-     * Para obtener información completa, usar obtenerProductosConDetalles() o obtenerProductosPorTienda()
+     * Para obtener información completa, usar obtenerProductosConDetalles()
      */
     static async obtenerProductos(){
         const [rows]:any = await pool.query(
@@ -78,11 +87,24 @@ export class ProductosRepository{
     static async actualizarProductoPorId(id:number, producto: Partial<ProductosDto>){
         const fields = [];
         const values = [];
+        const fieldMap: Record<string, string> = {
+            nombre: "nombre",
+            descripcion: "descripcion",
+            imagen_url: "image_url",
+            categoria_id: "category_id",
+            precio: "price",
+            talla: "talla",
+        };
         // Construye dinámicamente la consulta SQL según los campos recibidos
         for (const [key, value] of Object.entries(producto)) {
-            fields.push(`${key} = ?`);
+            const dbField = fieldMap[key];
+            if (!dbField) continue;
+            fields.push(`${dbField} = ?`);
             values.push(value);
-        }        
+        }
+        if (fields.length === 0) {
+            return null;
+        }
         const sql = `UPDATE productos SET ${fields.join(', ')} WHERE id = ?`;
         values.push(id);
         const [result] = await pool.query(sql, values);
@@ -107,84 +129,40 @@ export class ProductosRepository{
     }
 
     /**
-     * Obtiene productos con información completa filtrados por tienda Y categoría
+     * Obtiene productos con información completa filtrados por categoría
      * 
-     * @param tienda_id - ID de la tienda de la que se quieren obtener productos
-     * @param category_id - ID de la categoría específica dentro de esa tienda
+     * @param categoria_id - ID de la categoría específica
      * 
      * @returns Array de productos con:
      *   - Información básica del producto (id, nombre, descripción, imagen)
-     *   - Nombre de la categoría y de la tienda
+     *   - Nombre de la categoría
      *   - Todas las variantes del producto (talla, color, stock, precio)
      * 
      * Nota: Si un producto tiene múltiples variantes, aparecerá una fila por cada variante.
      * Usa LEFT JOIN para variantes, así muestra productos aunque no tengan variantes registradas.
      * 
-     * Ejemplo de uso: Mostrar todos los accesorios de la tienda "Artesanías Luna"
-     * GET /obtenerProductosConDetalles/1/2
+     * Ejemplo de uso: Mostrar todos los productos de la categoría 2
+     * GET /obtenerProductosConDetalles/2
      */
-    static async obtenerProductosConDetalles(tienda_id: number, category_id: number){
+    static async obtenerProductosConDetalles(categoria_id: number){
         const [rows]: any = await pool.query(
             `SELECT
                 p.id,
-                p.name AS producto,
-                p.description AS descripcion,
-                p.imagen,
-                p.category_id,
-                p.tienda_id,
+                p.nombre AS producto,
+                p.descripcion AS descripcion,
+                p.image_url AS imagen_url,
+                p.category_id AS categoria_id,
+                p.price AS precio,
+                p.talla,
                 c.name AS categoria,
-                t.nombre AS tienda,
-                vp.id AS variante_id,
-                vp.size AS talla,
-                vp.color,
-                vp.stock,
-                vp.price AS precio,
+                vp.stock AS existencias,
                 p.created_at,
                 p.updated_at
             FROM productos p
             JOIN categoria c ON p.category_id = c.id
-            JOIN tienda t ON p.tienda_id = t.id
-            LEFT JOIN variantes_productos vp ON p.id = vp.producto_id
-            WHERE p.tienda_id = ? AND p.category_id = ?`,
-            [tienda_id, category_id]
-        );
-        return rows;
-    }
-
-    /**
-     * Obtiene TODOS los productos de una tienda específica (sin filtrar por categoría)
-     * 
-     * @param tienda_id - ID de la tienda de la que se quieren obtener todos los productos
-     * 
-     * @returns Array de productos con:
-     *   - Información básica del producto (id, nombre, descripción, imagen)
-     *   - Nombre de la categoría y de la tienda
-     *   - Fechas de creación y actualización
-     * 
-     * Nota: Este método NO incluye las variantes de productos.
-     * Retorna todos los productos de todas las categorías de la tienda.
-     * 
-     * Ejemplo de uso: Mostrar el catálogo completo de la tienda "Artesanías Luna"
-     * GET /obtenerProductosPorTienda/1
-     */
-    static async obtenerProductosPorTienda(tienda_id: number){
-        const [rows]: any = await pool.query(
-            `SELECT
-                p.id,
-                p.name AS producto,
-                p.description AS descripcion,
-                p.imagen,
-                p.category_id,
-                p.tienda_id,
-                c.name AS categoria,
-                t.nombre AS tienda,
-                p.created_at,
-                p.updated_at
-            FROM productos p
-            JOIN categoria c ON p.category_id = c.id
-            JOIN tienda t ON p.tienda_id = t.id
-            WHERE p.tienda_id = ?`,
-            [tienda_id]
+            LEFT JOIN verificacionPrenda vp ON p.id = vp.producto_id
+            WHERE p.category_id = ?`,
+            [categoria_id]
         );
         return rows;
     }

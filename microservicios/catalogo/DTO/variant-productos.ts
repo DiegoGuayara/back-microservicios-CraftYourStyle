@@ -1,8 +1,8 @@
 export interface VariantProductos {
   id?: number;
   producto_id: number;
-  size: string;
+  talla: string;
   color: string;
-  stock: number;
-  price: number;
+  existencias: number;
+  precio: number;
 }

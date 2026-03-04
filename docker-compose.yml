@@ -86,6 +86,7 @@ services:
       - catalogo
       - notificaciones
       - agente-ia
+      - admin
 
   transacciones:
     build:
@@ -114,6 +115,19 @@ services:
       - "10103"
     env_file:
       - ./microservicios/catalogo/.env
+    networks:
+      - microservices-network
+
+  admin:
+    build:
+      context: ./microservicios/admin
+      dockerfile: Dockerfile
+    expose:
+      - "3000"
+    env_file:
+      - ./microservicios/admin/.env
+    environment:
+      CATALOGO_URL: http://catalogo:10103
     networks:
       - microservices-network
 

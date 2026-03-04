@@ -16,14 +16,14 @@ export class VariantProductosController {
   /** POST /variantProductos/crearVarianteProducto - Crea una nueva variante */
   static async crearVariantProducto(req: Request, res: Response) {
     try {
-      const { producto_id, size, color, stock, price } = req.body;
+      const { producto_id, talla, color, existencias, precio } = req.body;
 
       if (
         !producto_id ||
-        !size ||
+        !talla ||
         !color ||
-        stock === undefined ||
-        price === undefined
+        existencias === undefined ||
+        precio === undefined
       ) {
         res.status(400).json({ mensaje: "Faltan datos obligatorios" });
         return;
@@ -31,10 +31,10 @@ export class VariantProductosController {
 
       const nuevaVariant: VariantProductos = {
         producto_id,
-        size,
+        talla,
         color,
-        stock,
-        price,
+        existencias,
+        precio,
       };
 
       const result = await VariantProductosRepository.crearVariantProducto(
@@ -90,7 +90,7 @@ export class VariantProductosController {
   static async actualizarVariantProductoPorId(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { producto_id, size, color, stock, price } = req.body;
+      const { producto_id, talla, color, existencias, precio } = req.body;
 
       const variantExistente =
         await VariantProductosRepository.obtenerVariantProductoPorId(
@@ -105,10 +105,10 @@ export class VariantProductosController {
       const variantActualizada: Partial<VariantProductos> = {};
       if (producto_id !== undefined)
         variantActualizada.producto_id = producto_id;
-      if (size !== undefined) variantActualizada.size = size;
+      if (talla !== undefined) variantActualizada.talla = talla;
       if (color !== undefined) variantActualizada.color = color;
-      if (stock !== undefined) variantActualizada.stock = stock;
-      if (price !== undefined) variantActualizada.price = price;
+      if (existencias !== undefined) variantActualizada.existencias = existencias;
+      if (precio !== undefined) variantActualizada.precio = precio;
 
       if (Object.keys(variantActualizada).length === 0) {
         res

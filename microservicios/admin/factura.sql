@@ -17,7 +17,7 @@ CREATE TABLE facturas (
 
 CREATE TABLE detalle_factura (
     id SERIAL PRIMARY KEY,
-    id_factura int REFERENCES facturas(id) ON DELETE CASCADE,
+    id_factura UUID REFERENCES facturas(id) ON DELETE CASCADE,
     nombre_producto VARCHAR(150) NOT NULL,
     precio_unitario DECIMAL(12,2) NOT NULL,
     cantidad INTEGER NOT NULL,

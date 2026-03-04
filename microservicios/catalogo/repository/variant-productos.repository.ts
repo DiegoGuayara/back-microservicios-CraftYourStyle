@@ -12,10 +12,10 @@ import pool from "../config/db-config.js";
 export class VariantProductosRepository {
   /** Crea una nueva variante de producto (talla, color, stock, precio) */
   static async crearVariantProducto(variant: VariantProductos) {
-    const { producto_id, size, color, stock, price } = variant;
+    const { producto_id, talla, color, existencias, precio } = variant;
     const [result] = await pool.query(
       "INSERT INTO variantes_productos (producto_id, size, color, stock, price) VALUES (?, ?, ?, ?, ?)",
-      [producto_id, size, color, stock, price]
+      [producto_id, talla, color, existencias, precio]
     );
     return result;
   }
@@ -42,9 +42,21 @@ export class VariantProductosRepository {
   ) {
     const fields = [];
     const values = [];
+    const fieldMap: Record<string, string> = {
+      producto_id: "producto_id",
+      talla: "size",
+      color: "color",
+      existencias: "stock",
+      precio: "price",
+    };
     for (const [key, value] of Object.entries(variant)) {
-      fields.push(`${key} = ?`);
+      const dbField = fieldMap[key];
+      if (!dbField) continue;
+      fields.push(`${dbField} = ?`);
       values.push(value);
+    }
+    if (fields.length === 0) {
+      return null;
     }
     const sql = `UPDATE variantes_productos SET ${fields.join(
       ", "

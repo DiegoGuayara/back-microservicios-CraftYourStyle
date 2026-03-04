@@ -11,24 +11,23 @@ import pool from "../config/db-config.js";
 export class CategoriaRepository {
   /** Crea una nueva categoría */
   static async crearCategoria(categoria: CategoriaDto) {
-    const { name, tienda_id } = categoria;
-    const [result] = await pool.query(
-      "INSERT INTO categoria (name, tienda_id) VALUES (?, ?)",
-      [name, tienda_id]
-    );
+    const { nombre } = categoria;
+    const [result] = await pool.query("INSERT INTO categoria (name) VALUES (?)", [
+      nombre,
+    ]);
     return result;
   }
 
   /** Obtiene todas las categorías */
   static async obtenerCategorias() {
-    const [rows]: any = await pool.query("SELECT * FROM categoria");
+    const [rows]: any = await pool.query("SELECT id, name AS nombre FROM categoria");
     return rows;
   }
 
   /** Obtiene una categoría por ID */
   static async obtenerCategoriaPorId(id: number) {
     const [rows]: any = await pool.query(
-      "select * from categoria where id = ?",
+      "SELECT id, name AS nombre FROM categoria WHERE id = ?",
       [id]
     );
     if (rows.length === 0) {
@@ -50,10 +49,10 @@ export class CategoriaRepository {
   }
 
   /** Actualiza el nombre de una categoría */
-  static async actualizarCategoriaPorId(id: number, name: string) {
+  static async actualizarCategoriaPorId(id: number, nombre: string) {
     const [resultDb]: any = await pool.query(
       "update categoria set name = ? where id = ?",
-      [name, id]
+      [nombre, id]
     );
     if (resultDb.affectedRows === 0) {
       return null;
