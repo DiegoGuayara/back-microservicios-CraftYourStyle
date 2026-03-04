@@ -54,4 +54,13 @@ public class JwtUtil {
                 .getBody()
                 .get("role", String.class);
     }
+
+    public Date extraerExpiracion(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getExpiration();
+    }
 }

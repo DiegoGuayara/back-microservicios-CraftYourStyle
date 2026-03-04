@@ -1,20 +1,20 @@
 package com.example.CraftYourStyle2.services;
 import com.example.CraftYourStyle2.config.JwtUtil;
-import com.example.CraftYourStyle2.config.SecurityConfig;
 import com.example.CraftYourStyle2.dto.LoginUserDto;
 import com.example.CraftYourStyle2.dto.RegisterUserDto;
 import com.example.CraftYourStyle2.dto.ForgotPasswordDto;
 import com.example.CraftYourStyle2.dto.ResetPasswordDto;
+import com.example.CraftYourStyle2.model.RevokedToken;
 import com.example.CraftYourStyle2.model.User;
+import com.example.CraftYourStyle2.repository.RevokedTokenRepository;
 import com.example.CraftYourStyle2.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.GetMapping;
 
+import java.time.ZoneId;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -34,13 +34,19 @@ import java.util.UUID;
 public class UserServices {
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
+    private final RevokedTokenRepository revokedTokenRepository;
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
 
     @Autowired
-    public UserServices(PasswordEncoder passwordEncoder, UserRepository userRepository, JwtUtil jwtUtil, EmailService emailService){
+    public UserServices(PasswordEncoder passwordEncoder,
+                        UserRepository userRepository,
+                        RevokedTokenRepository revokedTokenRepository,
+                        JwtUtil jwtUtil,
+                        EmailService emailService){
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
+        this.revokedTokenRepository = revokedTokenRepository;
         this.jwtUtil = jwtUtil;
         this.emailService = emailService;
     }
@@ -219,13 +225,41 @@ public class UserServices {
         }
     }
 
-    public ResponseEntity<Object> eliminarUsario(Long id){
+    public ResponseEntity<Object> eliminarUsario(Long id, String authorizationHeader){
         HashMap<String,Object> respuesta = new HashMap<>();
         try{
             Optional<User> datos = userRepository.findById(id);
             if(datos.isPresent()){
+                if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                    respuesta.put("error", true);
+                    respuesta.put("message", "Falta token");
+                    return new ResponseEntity<>(respuesta, HttpStatus.UNAUTHORIZED);
+                }
+
+                String token = authorizationHeader.substring(7);
+                String requesterEmail = jwtUtil.extraerEmail(token);
+                String requesterRole = jwtUtil.extraerRole(token);
+                User usuarioObjetivo = datos.get();
+
+                boolean isAdmin = requesterRole != null && requesterRole.equalsIgnoreCase("ADMIN");
+                boolean isSelf = requesterEmail != null && requesterEmail.equalsIgnoreCase(usuarioObjetivo.getEmail());
+
+                if (!isAdmin && !isSelf) {
+                    respuesta.put("error", true);
+                    respuesta.put("message", "No tienes permisos para eliminar este usuario");
+                    return new ResponseEntity<>(respuesta, HttpStatus.FORBIDDEN);
+                }
+
                 userRepository.deleteById(id);
                 respuesta.put("message","usuario eliminado correctamente");
+                if (isSelf) {
+                    revocarToken(token);
+                    respuesta.put("logout", true);
+                    respuesta.put("reason", "account_deleted");
+                } else {
+                    respuesta.put("logout", false);
+                    respuesta.put("reason", "admin_deleted_other_user");
+                }
                 return new ResponseEntity<>(respuesta,HttpStatus.OK);
             }else{
                 respuesta.put("mensaje", "Usuario no encontrado.");
@@ -236,6 +270,50 @@ public class UserServices {
             respuesta.put("error", e.getMessage());
             return new ResponseEntity<>(respuesta, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public ResponseEntity<Object> logout(String authorizationHeader) {
+        HashMap<String, Object> respuesta = new HashMap<>();
+        try {
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                respuesta.put("error", true);
+                respuesta.put("message", "Falta token");
+                return new ResponseEntity<>(respuesta, HttpStatus.UNAUTHORIZED);
+            }
+
+            String token = authorizationHeader.substring(7);
+            if (!jwtUtil.validarToken(token)) {
+                respuesta.put("error", true);
+                respuesta.put("message", "Token inválido");
+                return new ResponseEntity<>(respuesta, HttpStatus.UNAUTHORIZED);
+            }
+
+            if (revokedTokenRepository.existsByTokenAndExpiresAtAfter(token, LocalDateTime.now())) {
+                respuesta.put("message", "La sesión ya estaba cerrada");
+                respuesta.put("logout", true);
+                respuesta.put("alreadyRevoked", true);
+                return new ResponseEntity<>(respuesta, HttpStatus.OK);
+            }
+
+            revocarToken(token);
+            respuesta.put("message", "Logout exitoso");
+            respuesta.put("logout", true);
+            return new ResponseEntity<>(respuesta, HttpStatus.OK);
+        } catch (Exception e) {
+            respuesta.put("error", true);
+            respuesta.put("message", "Error al cerrar sesión");
+            return new ResponseEntity<>(respuesta, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private void revocarToken(String token) {
+        RevokedToken revokedToken = new RevokedToken();
+        revokedToken.setToken(token);
+        revokedToken.setExpiresAt(
+                jwtUtil.extraerExpiracion(token).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
+        );
+        revokedToken.setRevokedAt(LocalDateTime.now());
+        revokedTokenRepository.save(revokedToken);
     }
 
     /**

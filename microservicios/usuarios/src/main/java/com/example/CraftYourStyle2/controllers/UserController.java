@@ -69,6 +69,11 @@ public class UserController {
         return this.userServices.login(dto);
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<Object> logoutUsuario(@RequestHeader(value = "Authorization", required = false) String authorizationHeader){
+        return this.userServices.logout(authorizationHeader);
+    }
+
     /**
      * Obtener un usuario por su ID
      * GET /v1/usuarios/{id}
@@ -102,8 +107,9 @@ public class UserController {
      * @return ResponseEntity con mensaje de confirmación o error si no existe
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Object> eliminar(@PathVariable Long id){
-        return this.userServices.eliminarUsario(id);
+    public ResponseEntity<Object> eliminar(@PathVariable Long id,
+                                           @RequestHeader(value = "Authorization", required = false) String authorizationHeader){
+        return this.userServices.eliminarUsario(id, authorizationHeader);
     }
 
     /**

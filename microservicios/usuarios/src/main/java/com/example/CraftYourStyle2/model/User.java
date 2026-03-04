@@ -1,5 +1,6 @@
 package com.example.CraftYourStyle2.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -25,6 +26,7 @@ public class User {
     private Long id;
     private String nombre;
     private String email;
+    @JsonIgnore
     private String contraseña;
     @Column(name = "role")
     private String role = "USER";
@@ -33,12 +35,15 @@ public class User {
     private Boolean emailVerificado = false;
     
     @Column(name = "token_verificacion")
+    @JsonIgnore
     private String tokenVerificacion;
     
     @Column(name = "token_recuperacion")
+    @JsonIgnore
     private String tokenRecuperacion;
     
     @Column(name = "fecha_expiracion_token")
+    @JsonIgnore
     private LocalDateTime fechaExpiracionToken;
 
     public User() {

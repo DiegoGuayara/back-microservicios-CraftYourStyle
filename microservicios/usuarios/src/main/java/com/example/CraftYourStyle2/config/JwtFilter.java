@@ -1,20 +1,23 @@
 package com.example.CraftYourStyle2.config;
 
+import com.example.CraftYourStyle2.repository.RevokedTokenRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final RevokedTokenRepository revokedTokenRepository;
 
-    public JwtFilter(JwtUtil jwtUtil) {
+    public JwtFilter(JwtUtil jwtUtil, RevokedTokenRepository revokedTokenRepository) {
         this.jwtUtil = jwtUtil;
+        this.revokedTokenRepository = revokedTokenRepository;
     }
 
     @Override
@@ -37,6 +40,13 @@ public class JwtFilter extends OncePerRequestFilter {
 //                return;
             }
 
+            if (revokedTokenRepository.existsByTokenAndExpiresAtAfter(token, LocalDateTime.now())) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"error\": \"Token revocado. Inicia sesión nuevamente\"}");
+                return;
+            }
+
         } else if (esRutaProtegida(request)) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
@@ -50,6 +60,8 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private boolean esRutaProtegida(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return request.getMethod().equals("DELETE") || request.getMethod().equals("PUT");
+        boolean deleteOrPut = request.getMethod().equals("DELETE") || request.getMethod().equals("PUT");
+        boolean logout = request.getMethod().equals("POST") && path.endsWith("/logout");
+        return deleteOrPut || logout;
     }
 }
