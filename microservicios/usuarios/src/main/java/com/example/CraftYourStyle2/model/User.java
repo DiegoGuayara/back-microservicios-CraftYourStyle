@@ -46,6 +46,9 @@ public class User {
     @JsonIgnore
     private LocalDateTime fechaExpiracionToken;
 
+    @Column(name = "auth_provider")
+    private String authProvider = "LOCAL";
+
     public User() {
     }
 
@@ -128,5 +131,13 @@ public class User {
 
     public void setFechaExpiracionToken(LocalDateTime fechaExpiracionToken) {
         this.fechaExpiracionToken = fechaExpiracionToken;
+    }
+
+    public String getAuthProvider() {
+        return authProvider;
+    }
+
+    public void setAuthProvider(String authProvider) {
+        this.authProvider = authProvider;
     }
 }

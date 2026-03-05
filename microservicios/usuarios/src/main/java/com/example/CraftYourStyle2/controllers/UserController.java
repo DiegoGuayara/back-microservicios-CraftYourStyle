@@ -1,4 +1,5 @@
 package com.example.CraftYourStyle2.controllers;
+import com.example.CraftYourStyle2.dto.GoogleLoginDto;
 import com.example.CraftYourStyle2.dto.LoginUserDto;
 import com.example.CraftYourStyle2.dto.RegisterUserDto;
 import com.example.CraftYourStyle2.dto.ForgotPasswordDto;
@@ -67,6 +68,18 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<Object> loginUsuario(@Valid @RequestBody LoginUserDto dto){
         return this.userServices.login(dto);
+    }
+
+    /**
+     * Iniciar sesión con Google via Firebase
+     * POST /v1/usuarios/login/google
+     * 
+     * @param dto Token de Google (idToken)
+     * @return ResponseEntity con token JWT si el token de Google es válido
+     */
+    @PostMapping("/login/google")
+    public ResponseEntity<Object> loginGoogle(@Valid @RequestBody GoogleLoginDto dto){
+        return this.userServices.loginGoogle(dto);
     }
 
     @PostMapping("/logout")

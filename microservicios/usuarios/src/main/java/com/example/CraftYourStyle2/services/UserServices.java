@@ -1,5 +1,6 @@
 package com.example.CraftYourStyle2.services;
 import com.example.CraftYourStyle2.config.JwtUtil;
+import com.example.CraftYourStyle2.dto.GoogleLoginDto;
 import com.example.CraftYourStyle2.dto.LoginUserDto;
 import com.example.CraftYourStyle2.dto.RegisterUserDto;
 import com.example.CraftYourStyle2.dto.ForgotPasswordDto;
@@ -8,6 +9,9 @@ import com.example.CraftYourStyle2.model.RevokedToken;
 import com.example.CraftYourStyle2.model.User;
 import com.example.CraftYourStyle2.repository.RevokedTokenRepository;
 import com.example.CraftYourStyle2.repository.UserRepository;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.FirebaseToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -433,6 +437,80 @@ public class UserServices {
         } catch (Exception e) {
             respuesta.put("error", true);
             respuesta.put("message", "Error al restablecer la contraseña");
+            return new ResponseEntity<>(respuesta, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Login con Google usando Firebase
+     * 
+     * Proceso:
+     * 1. Verifica el idToken con Firebase Admin SDK
+     * 2. Si el usuario ya existe, genera JWT y retorna
+     * 3. Si no existe, crea un nuevo usuario con authProvider=GOOGLE
+     * 4. Retorna token JWT y datos del usuario
+     * 
+     * @param dto Contiene el idToken de Google/Firebase
+     * @return ResponseEntity con token JWT o error
+     */
+    public ResponseEntity<Object> loginGoogle(GoogleLoginDto dto) {
+        HashMap<String, Object> respuesta = new HashMap<>();
+        try {
+            // Verificar el token con Firebase
+            FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(dto.getIdToken());
+
+            String email = decodedToken.getEmail();
+            String nombre = decodedToken.getName();
+
+            if (email == null || email.isEmpty()) {
+                respuesta.put("error", true);
+                respuesta.put("message", "No se pudo obtener el email de Google");
+                return new ResponseEntity<>(respuesta, HttpStatus.BAD_REQUEST);
+            }
+
+            // Buscar si el usuario ya existe
+            Optional<User> datos = userRepository.findByEmail(email);
+            User user;
+
+            if (datos.isPresent()) {
+                user = datos.get();
+                // Si el usuario existente es LOCAL, no permitir login con Google
+                if ("LOCAL".equals(user.getAuthProvider())) {
+                    respuesta.put("error", true);
+                    respuesta.put("message", "Este email ya está registrado con contraseña. Usa el login normal.");
+                    return new ResponseEntity<>(respuesta, HttpStatus.CONFLICT);
+                }
+            } else {
+                // Crear nuevo usuario con Google
+                user = new User();
+                user.setNombre(nombre != null ? nombre : "Usuario Google");
+                user.setEmail(email);
+                user.setAuthProvider("GOOGLE");
+                user.setRole("USER");
+                user.setEmailVerificado(true); // Google ya verificó el email
+                user = userRepository.save(user);
+            }
+
+            // Generar token JWT propio
+            String token = jwtUtil.generarToken(user.getEmail(), user.getRole());
+
+            respuesta.put("token", token);
+            respuesta.put("id", user.getId());
+            respuesta.put("usuario", user.getEmail());
+            respuesta.put("nombre", user.getNombre());
+            respuesta.put("role", user.getRole());
+            respuesta.put("authProvider", user.getAuthProvider());
+            respuesta.put("message", "Login con Google exitoso");
+
+            return new ResponseEntity<>(respuesta, HttpStatus.OK);
+
+        } catch (FirebaseAuthException e) {
+            respuesta.put("error", true);
+            respuesta.put("message", "Token de Google inválido o expirado");
+            return new ResponseEntity<>(respuesta, HttpStatus.UNAUTHORIZED);
+        } catch (Exception e) {
+            respuesta.put("error", true);
+            respuesta.put("message", "Error al iniciar sesión con Google");
             return new ResponseEntity<>(respuesta, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
