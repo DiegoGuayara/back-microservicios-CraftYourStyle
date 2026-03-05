@@ -128,6 +128,8 @@ services:
       - ./microservicios/admin/.env
     environment:
       CATALOGO_URL: http://catalogo:10103
+      USUARIOS_URL: http://usuarios:8080
+      NOTIFICACIONES_URL: http://notificaciones:10104
     networks:
       - microservices-network
 

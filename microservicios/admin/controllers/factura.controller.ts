@@ -20,10 +20,10 @@ export class FacturaController {
 
   static async crearFactura(req: Request, res: Response) {
     try {
-      const factura = await FacturaService.crearFactura(req.body);
+      const { factura, notificacion } = await FacturaService.crearFactura(req.body);
       return res.status(201).json({
-        message: "Factura creada correctamente",
-        data: factura,
+        message: "Factura creada y enviada por correo correctamente",
+        data: { factura, notificacion },
       });
     } catch (error: unknown) {
       return this.handleError(error, res);

@@ -5,6 +5,7 @@ Define los schemas para validar datos de entrada y salida en las APIs.
 Utiliza Pydantic para validación automática de tipos y datos.
 """
 
+from typing import Optional
 from pydantic import BaseModel
 from enum import Enum
 
@@ -27,9 +28,11 @@ class NotificacionCreate(BaseModel):
     Atributos:
         tipo_de_notificacion: Tipo de notificación (debe ser uno de los valores del Enum)
         mensaje: Texto del mensaje (obligatorio)
+        destinatario: Email del destinatario (opcional, requerido para correo_electronico)
     """
     tipo_de_notificacion: TipoNotificacion
     mensaje: str
+    destinatario: Optional[str] = None
 
 class NotificacionResponse(NotificacionCreate):
     """

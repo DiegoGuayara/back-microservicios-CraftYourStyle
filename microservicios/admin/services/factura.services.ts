@@ -6,8 +6,6 @@ import type { Factura, ProductoFactura } from "../models/factura.models.js";
 
 interface CreateFacturaInput {
   id_usuario: string;
-  nombre_usuario: string;
-  correo_usuario: string;
   productos: Array<{
     nombre_producto: string;
     precio_unitario: number;
@@ -16,6 +14,11 @@ interface CreateFacturaInput {
   }>;
   estado?: "PENDIENTE" | "PAGADA" | "VENCIDA";
   dias_vencimiento?: number;
+}
+
+interface UsuarioData {
+  nombre: string;
+  email: string;
 }
 
 interface FacturaRow extends RowDataPacket {
@@ -50,6 +53,33 @@ export class FacturaServiceError extends Error {
 export class FacturaService {
   private static getNotificacionesBaseUrl(): string {
     return process.env.NOTIFICACIONES_URL ?? "http://notificaciones:10104";
+  }
+
+  private static getUsuariosBaseUrl(): string {
+    return process.env.USUARIOS_URL ?? "http://usuarios:8080";
+  }
+
+  private static async obtenerDatosUsuario(idUsuario: string): Promise<UsuarioData> {
+    const url = `${this.getUsuariosBaseUrl()}/v1/usuarios/${idUsuario}`;
+
+    try {
+      const { data } = await axios.get(url, { timeout: 10000 });
+
+      const usuario = data.usuario ?? data;
+      if (!usuario?.nombre || !usuario?.email) {
+        throw new FacturaServiceError("El usuario no tiene nombre o email registrado", 400);
+      }
+
+      return { nombre: usuario.nombre, email: usuario.email };
+    } catch (error: unknown) {
+      if (error instanceof FacturaServiceError) throw error;
+
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        throw new FacturaServiceError(`Usuario con ID ${idUsuario} no encontrado`, 404);
+      }
+
+      throw new FacturaServiceError("No se pudo obtener los datos del usuario", 502);
+    }
   }
 
   private static toMoney(value: number): number {
@@ -87,21 +117,22 @@ export class FacturaService {
     }));
   }
 
-  static async crearFactura(input: CreateFacturaInput): Promise<Factura> {
+  static async crearFactura(input: CreateFacturaInput): Promise<{ factura: Factura; notificacion: unknown }> {
     const {
       id_usuario,
-      nombre_usuario,
-      correo_usuario,
       productos,
       estado = "PAGADA",
       dias_vencimiento = 7,
     } = input;
 
-    if (!id_usuario || !nombre_usuario || !correo_usuario) {
-      throw new FacturaServiceError(
-        "Faltan datos obligatorios de usuario (id_usuario, nombre_usuario, correo_usuario)"
-      );
+    if (!id_usuario) {
+      throw new FacturaServiceError("Falta el id_usuario");
     }
+
+    // Obtener nombre y correo del usuario automáticamente desde el micro de usuarios
+    const datosUsuario = await this.obtenerDatosUsuario(id_usuario);
+    const nombre_usuario = datosUsuario.nombre;
+    const correo_usuario = datosUsuario.email;
 
     if (!Array.isArray(productos) || productos.length === 0) {
       throw new FacturaServiceError("La factura debe incluir al menos un producto");
@@ -175,7 +206,7 @@ export class FacturaService {
 
       await connection.commit();
 
-      return {
+      const factura: Factura = {
         id,
         id_usuario,
         nombre_usuario,
@@ -187,6 +218,11 @@ export class FacturaService {
         fecha_vencimiento: fechaVencimiento.toISOString(),
         estado,
       };
+
+      // Enviar factura por correo automáticamente
+      const notificacion = await this.enviarNotificacionCorreo(factura);
+
+      return { factura, notificacion };
     } catch (error) {
       await connection.rollback();
       throw error;
@@ -232,14 +268,14 @@ export class FacturaService {
     return resultado;
   }
 
-  static async enviarFacturaPorCorreo(id: string): Promise<{ factura: Factura; notificacion: unknown }> {
-    const factura = await this.obtenerFacturaPorId(id);
+  private static async enviarNotificacionCorreo(factura: Factura): Promise<unknown> {
     const notificacionesUrl = `${this.getNotificacionesBaseUrl()}/`;
 
     const mensaje = [
-      `Factura ${factura.id}`,
-      `Cliente: ${factura.nombre_usuario} (${factura.correo_usuario})`,
-      `Total: ${factura.valor_total}`,
+      `Destinatario: ${factura.correo_usuario}`,
+      `Factura: ${factura.id}`,
+      `Cliente: ${factura.nombre_usuario}`,
+      `Total: $${factura.valor_total}`,
       `Estado: ${factura.estado}`,
       `Productos: ${factura.productos.map((p) => `${p.nombre_producto} x${p.cantidad}`).join(", ")}`,
     ].join(" | ");
@@ -250,11 +286,12 @@ export class FacturaService {
         {
           tipo_de_notificacion: "correo_electronico",
           mensaje,
+          destinatario: factura.correo_usuario,
         },
         { timeout: 10000 }
       );
 
-      return { factura, notificacion: data };
+      return data;
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         const status = error.response?.status ?? 502;
@@ -267,5 +304,11 @@ export class FacturaService {
 
       throw new FacturaServiceError("No se pudo enviar la notificación de correo", 500);
     }
+  }
+
+  static async enviarFacturaPorCorreo(id: string): Promise<{ factura: Factura; notificacion: unknown }> {
+    const factura = await this.obtenerFacturaPorId(id);
+    const notificacion = await this.enviarNotificacionCorreo(factura);
+    return { factura, notificacion };
   }
 }

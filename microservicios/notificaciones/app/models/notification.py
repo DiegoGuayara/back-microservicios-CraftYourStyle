@@ -32,9 +32,11 @@ class Notificacion(Base):
         id: Identificador único auto-incremental
         tipo_de_notificacion: Tipo de notificación (mensaje_texto, correo_electronico, push)
         mensaje: Contenido de la notificación (máximo 250 caracteres)
+        destinatario: Email del destinatario (opcional)
     """
     __tablename__ = "notificaciones"
 
     id = Column(Integer, primary_key=True, index=True)
     tipo_de_notificacion = Column(Enum(TipoNotificacion), nullable=False)
     mensaje = Column(String(250), nullable=False)
+    destinatario = Column(String(150), nullable=True)

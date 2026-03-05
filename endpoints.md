@@ -39,6 +39,42 @@ Body por nombre de categoría:
   "categoria": "Camisetas",
   "price": 10000
 }
+
+Facturas (requiere rol ADMIN)
+
+POST /api/admin/facturas/crear
+Crea una factura y envía automáticamente el correo al usuario.
+Solo necesitas el id_usuario y los productos. El nombre y correo se obtienen automáticamente del micro de usuarios.
+Body:
+{
+  "id_usuario": "1",
+  "productos": [
+    {
+      "nombre_producto": "Chaqueta Negra",
+      "precio_unitario": 120000,
+      "cantidad": 1
+    },
+    {
+      "nombre_producto": "Pantalón Cargo",
+      "precio_unitario": 90000,
+      "cantidad": 2
+    }
+  ]
+}
+Notas:
+- subtotal por producto es opcional; si no se envía, se calcula como precio_unitario * cantidad.
+- valor_total y total_productos siempre se calculan en backend.
+- estado por defecto es "PAGADA". Valores posibles: "PENDIENTE", "PAGADA", "VENCIDA".
+- dias_vencimiento es opcional (por defecto 7).
+
+GET /api/admin/facturas/:id
+Obtiene una factura por su ID.
+
+GET /api/admin/facturas/usuario/:id_usuario
+Obtiene todas las facturas de un usuario.
+
+POST /api/admin/facturas/:id/enviar-correo
+Reenvía la factura por correo al usuario.
 2) Catálogo
 Categorías
 POST /api/catalogo/catalogo/crearCategoria
@@ -103,6 +139,12 @@ Body:
   "tipo_de_notificacion": "mensaje_texto",
   "mensaje": "Hola"
 }
+Con envío de correo (cuando tipo es correo_electronico y se incluye destinatario):
+{
+  "tipo_de_notificacion": "correo_electronico",
+  "mensaje": "Contenido del correo",
+  "destinatario": "usuario@email.com"
+}
 GET /api/notificaciones/
 GET /api/notificaciones/health
 6) Agente IA
@@ -124,5 +166,3 @@ Try-On
 POST /api/agente-ia/tryon/generate
 GET /api/agente-ia/tryon/user/:id_user
 PATCH /api/agente-ia/tryon/:prueba_id/favorite?id_user=...
-Observación importante
-microservicios/admin/routes/factura.routes.ts está vacío, así que actualmente no hay endpoints de factura publicados.

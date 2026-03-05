@@ -22,11 +22,12 @@ Se creó el módulo completo de facturas dentro de `microservicios/admin` con:
 ## Flujo implementado (según tu diagrama)
 
 1. Usuario paga la compra (ese paso ocurre en otro micro).
-2. Admin crea factura vía endpoint (`POST /admin/facturas/crear`).
-3. Se guarda cabecera en `facturas` y detalle en `detalle_factura` dentro de una transacción.
-4. Admin puede consultar factura por id o por usuario.
-5. Admin puede disparar envío por correo con `POST /admin/facturas/:id/enviar-correo`.
-6. El envío se hace llamando al micro de notificaciones (`tipo_de_notificacion = correo_electronico`).
+2. Admin crea factura vía endpoint (`POST /admin/facturas/crear`) enviando solo `id_usuario` y `productos`.
+3. El servicio consulta automáticamente el micro de usuarios (`GET /v1/usuarios/{id}`) para obtener nombre y correo.
+4. Se guarda cabecera en `facturas` y detalle en `detalle_factura` dentro de una transacción.
+5. Se envía automáticamente la factura por correo al micro de notificaciones.
+6. Admin puede consultar factura por id o por usuario.
+7. Admin puede reenviar correo manualmente con `POST /admin/facturas/:id/enviar-correo`.
 
 ## Endpoints disponibles
 
@@ -42,10 +43,6 @@ Todos protegidos con `requireAdmin` (requieren JWT con `role=ADMIN`):
 ```json
 {
   "id_usuario": "123",
-  "nombre_usuario": "Juan Perez",
-  "correo_usuario": "juan@email.com",
-  "estado": "PAGADA",
-  "dias_vencimiento": 7,
   "productos": [
     {
       "nombre_producto": "Chaqueta Negra",
@@ -63,8 +60,10 @@ Todos protegidos con `requireAdmin` (requieren JWT con `role=ADMIN`):
 
 Notas:
 
+- Solo necesitas enviar `id_usuario` y `productos`. El nombre y correo del usuario se obtienen automáticamente del micro de usuarios.
 - `subtotal` por producto es opcional; si no se envía, se calcula como `precio_unitario * cantidad`.
 - `valor_total` y `total_productos` siempre se calculan en backend.
+- Al crear la factura, se envía automáticamente por correo al usuario.
 
 ## Variables de entorno necesarias (admin)
 
@@ -73,6 +72,7 @@ Notas:
 - `DB_USER`
 - `DB_PASSWORD`
 - `DB_NAME` (por defecto: `factura`)
+- `USUARIOS_URL` (por defecto: `http://usuarios:8080`)
 - `NOTIFICACIONES_URL` (por defecto: `http://notificaciones:10104`)
 - `JWT_SECRET` (ya usado por `requireAdmin`)
 
@@ -87,4 +87,4 @@ Esto evita errores por usar `UUID` como tipo nativo (no soportado de esa forma e
 
 ## Pendiente recomendado
 
-Si quieres automatizar completamente el diagrama, el siguiente paso es crear factura al confirmar pago (evento o webhook) para que no dependa de crearla manualmente desde admin.
+Si quieres automatizar completamente el diagrama, el siguiente paso es crear la factura automáticamente al confirmar el pago (evento o webhook desde el micro de transacciones) para que no dependa de que el admin la cree manualmente.
