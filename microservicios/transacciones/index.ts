@@ -27,6 +27,8 @@ app.use(express.json())
 
 // Rutas del microservicio de transacciones
 app.use("/transacciones", router)
+// Compatibilidad: permite también /crearCuenta, /obtenerCuentas, etc. sin doble prefijo
+app.use("/", router)
 
 // Ruta raíz para verificar que el microservicio está funcionando
 app.get("/", (req: Request, res:Response) => {

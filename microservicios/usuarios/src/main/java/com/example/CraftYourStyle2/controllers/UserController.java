@@ -87,6 +87,13 @@ public class UserController {
         return this.userServices.logout(authorizationHeader);
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<Object> perfilUsuario(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        return this.userServices.obtenerPerfil(authorizationHeader);
+    }
+
     /**
      * Obtener un usuario por su ID
      * GET /v1/usuarios/{id}

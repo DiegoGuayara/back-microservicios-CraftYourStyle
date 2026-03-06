@@ -10,6 +10,29 @@ import { ProductosRepository } from "../repository/productos.repository.js";
 import type { ProductosDto } from "../DTO/productosDto.js";
 
 export class ProductoController{
+    private static normalizeProductInput(payload: any): ProductosDto {
+        return {
+            nombre: payload.nombre ?? payload.name ?? "",
+            descripcion: payload.descripcion ?? payload.description,
+            imagen_url: payload.imagen_url ?? payload.image_url ?? payload.imagen ?? payload.image,
+            categoria_id: Number(payload.categoria_id ?? payload.category_id ?? 0),
+            price: Number(payload.price ?? payload.precio ?? 0),
+            talla: payload.talla ?? payload.size ?? "",
+        };
+    }
+
+    private static toUiProduct(producto: any) {
+        return {
+            id: producto.id,
+            name: producto.nombre ?? producto.producto ?? "",
+            category: producto.categoria ?? producto.categoria_id ?? producto.category_id ?? null,
+            price: Number(producto.price ?? producto.precio ?? 0),
+            stock: Number(producto.existencias ?? producto.stock ?? 0),
+            image: producto.imagen_url ?? producto.image_url ?? producto.image ?? "",
+            description: producto.descripcion ?? null,
+            size: producto.talla ?? null,
+        };
+    }
     /**
      * Crea un nuevo producto
      * 
@@ -30,23 +53,24 @@ export class ProductoController{
      */
     static async createProduct(req:Request,res:Response){
         try{
-        const {nombre, descripcion, imagen_url, categoria_id, price, talla} = req.body
-        const newProducto:ProductosDto = {
-            nombre,
-            imagen_url,
-            categoria_id,
-            descripcion,
-            price,
-            talla
-        }
+        const newProducto:ProductosDto = this.normalizeProductInput(req.body);
+        const { nombre, categoria_id, price, talla } = newProducto;
         // Validar que todos los campos obligatorios estén presentes
-        if(!nombre || !categoria_id || price === undefined || !talla){
+        if(!nombre || !categoria_id || !Number.isFinite(price) || !talla){
             res.status(400).json({message:"Faltan datos obligatorios"})
             return
         }
             const result: any = await ProductosRepository.crearProducto(newProducto)
 
-            res.status(201).json({message:"Producto creado", id: result})
+            res.status(201).json({
+                message:"Producto creado",
+                data: {
+                    id: result?.insertId ?? null,
+                    product: newProducto
+                },
+                // Compatibilidad
+                id: result
+            })
         }catch(error){
             res.status(500).json({message:"Error al crear el producto", error})
             console.error("Error al crear el producto:", error)
@@ -66,8 +90,14 @@ export class ProductoController{
      */
     static async getProducts(req:Request,res:Response){
         try{
-            const producto = await ProductosRepository.obtenerProductos()   
-            return !producto ? res.status(404).json({message:"No se encontraron productos"}) : res.status(200).json({message:"Productos obtenidos correctamente", data:producto})
+            const producto = await ProductosRepository.obtenerProductos()
+            return !producto
+                ? res.status(404).json({message:"No se encontraron productos"})
+                : res.status(200).json({
+                    message:"Productos obtenidos correctamente",
+                    data:producto,
+                    data_ui: producto.map((p: any) => this.toUiProduct(p)),
+                })
         }catch(error){
             res.status(500).json({message:"Error al obtener los productos", error})
             console.error("Error al obtener los productos:", error)
@@ -90,7 +120,11 @@ export class ProductoController{
             if(!producto) {
                 return res.status(404).json({message:"Producto no encontrado"})
             }
-            return res.status(200).json({message:"Producto obtenido correctamente", data:producto})
+            return res.status(200).json({
+                message:"Producto obtenido correctamente",
+                data:producto,
+                data_ui: this.toUiProduct(producto),
+            })
         }catch(error){
             res.status(500).json({message:"Error al obtener el producto", error})
             console.error("Error al obtener el producto:", error)
@@ -112,7 +146,14 @@ export class ProductoController{
     static async updateProductById(req:Request,res:Response){
         try{
             const{id} = req.params
-            const productoUpdates:Partial<ProductosDto> = req.body
+            const normalized = this.normalizeProductInput(req.body);
+            const productoUpdates:Partial<ProductosDto> = {}
+            if (normalized.nombre) productoUpdates.nombre = normalized.nombre
+            if (normalized.descripcion !== undefined) productoUpdates.descripcion = normalized.descripcion
+            if (normalized.imagen_url !== undefined) productoUpdates.imagen_url = normalized.imagen_url
+            if (normalized.categoria_id) productoUpdates.categoria_id = normalized.categoria_id
+            if (Number.isFinite(normalized.price) && normalized.price >= 0) productoUpdates.price = normalized.price
+            if (normalized.talla) productoUpdates.talla = normalized.talla
             const result = await ProductosRepository.actualizarProductoPorId(Number(id),productoUpdates)
             if(!result) {
                 return res.status(404).json({message:"Producto no encontrado"})
@@ -179,7 +220,11 @@ export class ProductoController{
             const productos = await ProductosRepository.obtenerProductosConDetalles(Number(categoria_id))
             return !productos || productos.length === 0
                 ? res.status(404).json({message:"No se encontraron productos con detalles"}) 
-                : res.status(200).json({message:"Productos con detalles obtenidos correctamente", data:productos})
+                : res.status(200).json({
+                    message:"Productos con detalles obtenidos correctamente",
+                    data:productos,
+                    data_ui: productos.map((p: any) => this.toUiProduct(p)),
+                })
         }catch(error){
             res.status(500).json({message:"Error al obtener los productos con detalles", error})
             console.error("Error al obtener los productos con detalles:", error)

@@ -92,6 +92,7 @@ export class ProductosRepository{
             descripcion: "descripcion",
             imagen_url: "image_url",
             categoria_id: "category_id",
+            price: "price",
             precio: "price",
             talla: "talla",
         };

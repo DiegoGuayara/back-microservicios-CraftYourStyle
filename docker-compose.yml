@@ -101,6 +101,7 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: guest
       RABBITMQ_PASSWORD: guest
+      USUARIOS_URL: http://usuarios:8080
     networks:
       - microservices-network
     depends_on:
@@ -130,6 +131,7 @@ services:
       CATALOGO_URL: http://catalogo:10103
       USUARIOS_URL: http://usuarios:8080
       NOTIFICACIONES_URL: http://notificaciones:10104
+      AGENTE_IA_URL: http://agente-ia:10105
     networks:
       - microservices-network
 

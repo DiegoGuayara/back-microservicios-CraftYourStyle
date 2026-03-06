@@ -13,7 +13,7 @@ export class CatalogoController {
   /** POST /catalogo/crearCategoria - Crea una nueva categoría */
   static async crearCategoria(req: Request, res: Response) {
     try {
-      const { nombre } = req.body;
+      const nombre = req.body?.nombre ?? req.body?.name ?? req.body?.title;
 
       if (!nombre) {
         res.status(400).json({
@@ -134,7 +134,7 @@ export class CatalogoController {
   static async actualizarCategoriaPorId(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { nombre } = req.body;
+      const nombre = req.body?.nombre ?? req.body?.name ?? req.body?.title;
 
       if (!nombre || !id) {
         res.status(400).json({

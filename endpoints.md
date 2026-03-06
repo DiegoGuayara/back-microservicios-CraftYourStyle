@@ -1,5 +1,8 @@
 Perfecto. Te dejo la documentación de endpoints vía Gateway lista para pegar en tu README.
 
+Nota de versión:
+- Contrato operativo y rutas deprecadas: revisar `BACKEND_CONTRATO_V1.md` en la raíz del repo.
+
 Base URL Gateway
 http://localhost:1010
 

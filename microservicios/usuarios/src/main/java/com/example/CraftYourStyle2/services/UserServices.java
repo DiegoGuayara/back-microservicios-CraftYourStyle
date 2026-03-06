@@ -64,6 +64,41 @@ public class UserServices {
         return this.userRepository.findAll();
     }
 
+    private HashMap<String, Object> buildUserPayload(User user) {
+        HashMap<String, Object> userPayload = new HashMap<>();
+        userPayload.put("id", user.getId());
+        userPayload.put("email", user.getEmail());
+        userPayload.put("usuario", user.getEmail());
+        userPayload.put("nombre", user.getNombre());
+        userPayload.put("role", user.getRole());
+        userPayload.put("emailVerificado", user.getEmailVerificado());
+        userPayload.put("authProvider", user.getAuthProvider());
+        return userPayload;
+    }
+
+    private HashMap<String, Object> buildAuthResponse(String message, User user, String token) {
+        HashMap<String, Object> response = new HashMap<>();
+        HashMap<String, Object> userPayload = buildUserPayload(user);
+        HashMap<String, Object> data = new HashMap<>();
+
+        data.put("token", token);
+        data.put("user", userPayload);
+
+        response.put("message", message);
+        response.put("data", data);
+
+        // Compatibilidad con clientes existentes que leen estas claves en raíz.
+        response.put("token", token);
+        response.put("id", user.getId());
+        response.put("usuario", user.getEmail());
+        response.put("nombre", user.getNombre());
+        response.put("role", user.getRole());
+        response.put("emailVerificado", user.getEmailVerificado());
+        response.put("authProvider", user.getAuthProvider());
+
+        return response;
+    }
+
     /**
      * Crear un nuevo usuario
      * 
@@ -104,13 +139,13 @@ public class UserServices {
             
             // Guardar en base de datos
             User nuevoUsuario = userRepository.save(user);
+            String token = jwtUtil.generarToken(nuevoUsuario.getEmail(), nuevoUsuario.getRole());
             
             // Enviar correo de verificación
             emailService.enviarCorreoVerificacion(user.getEmail(), user.getNombre(), tokenVerificacion);
             
-            nuevoUsuario.setContraseña(null);
-            datos.put("Usuario",nuevoUsuario);
-            datos.put("message","Usuario creado. Por favor verifica tu correo electrónico.");
+            datos = buildAuthResponse("Usuario creado. Por favor verifica tu correo electrónico.", nuevoUsuario, token);
+            datos.put("Usuario", buildUserPayload(nuevoUsuario));
 
             return new ResponseEntity<>(datos,HttpStatus.CREATED);
         } catch (Exception e) {
@@ -152,18 +187,17 @@ public class UserServices {
                 respuesta.put("message", "Contraseña incorrecta");
                 return new ResponseEntity<>(respuesta, HttpStatus.UNAUTHORIZED);
             }
+            
+            if (!Boolean.TRUE.equals(user.getEmailVerificado())) {
+                respuesta.put("error", true);
+                respuesta.put("message", "Debes verificar tu correo antes de iniciar sesión");
+                return new ResponseEntity<>(respuesta, HttpStatus.FORBIDDEN);
+            }
 
             // Generar token JWT
             String token = jwtUtil.generarToken(user.getEmail(), user.getRole());
 
-            // Remover contraseña de la respuesta por seguridad
-            user.setContraseña(null);
-
-            respuesta.put("token", token);
-            respuesta.put("id", user.getId());
-            respuesta.put("usuario", user.getEmail());
-            respuesta.put("role", user.getRole());
-            respuesta.put("message", "Login exitoso");
+            respuesta = buildAuthResponse("Login exitoso", user, token);
 
             return new ResponseEntity<>(respuesta, HttpStatus.OK);
 
@@ -306,6 +340,57 @@ public class UserServices {
         } catch (Exception e) {
             respuesta.put("error", true);
             respuesta.put("message", "Error al cerrar sesión");
+            return new ResponseEntity<>(respuesta, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public ResponseEntity<Object> obtenerPerfil(String authorizationHeader) {
+        HashMap<String, Object> respuesta = new HashMap<>();
+        try {
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                respuesta.put("error", true);
+                respuesta.put("message", "Falta token");
+                return new ResponseEntity<>(respuesta, HttpStatus.UNAUTHORIZED);
+            }
+
+            String token = authorizationHeader.substring(7);
+            if (!jwtUtil.validarToken(token)) {
+                respuesta.put("error", true);
+                respuesta.put("message", "Token inválido");
+                return new ResponseEntity<>(respuesta, HttpStatus.UNAUTHORIZED);
+            }
+
+            if (revokedTokenRepository.existsByTokenAndExpiresAtAfter(token, LocalDateTime.now())) {
+                respuesta.put("error", true);
+                respuesta.put("message", "Token revocado");
+                return new ResponseEntity<>(respuesta, HttpStatus.UNAUTHORIZED);
+            }
+
+            String email = jwtUtil.extraerEmail(token);
+            Optional<User> usuario = userRepository.findByEmail(email);
+            if (usuario.isEmpty()) {
+                respuesta.put("error", true);
+                respuesta.put("message", "Usuario no encontrado");
+                return new ResponseEntity<>(respuesta, HttpStatus.NOT_FOUND);
+            }
+
+            User user = usuario.get();
+            HashMap<String, Object> userPayload = buildUserPayload(user);
+            HashMap<String, Object> data = new HashMap<>();
+            data.put("user", userPayload);
+
+            respuesta.put("message", "Perfil obtenido exitosamente");
+            respuesta.put("data", data);
+            respuesta.put("user", userPayload);
+            respuesta.put("id", user.getId());
+            respuesta.put("usuario", user.getEmail());
+            respuesta.put("nombre", user.getNombre());
+            respuesta.put("role", user.getRole());
+
+            return new ResponseEntity<>(respuesta, HttpStatus.OK);
+        } catch (Exception e) {
+            respuesta.put("error", true);
+            respuesta.put("message", "Error al obtener perfil");
             return new ResponseEntity<>(respuesta, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -494,13 +579,7 @@ public class UserServices {
             // Generar token JWT propio
             String token = jwtUtil.generarToken(user.getEmail(), user.getRole());
 
-            respuesta.put("token", token);
-            respuesta.put("id", user.getId());
-            respuesta.put("usuario", user.getEmail());
-            respuesta.put("nombre", user.getNombre());
-            respuesta.put("role", user.getRole());
-            respuesta.put("authProvider", user.getAuthProvider());
-            respuesta.put("message", "Login con Google exitoso");
+            respuesta = buildAuthResponse("Login con Google exitoso", user, token);
 
             return new ResponseEntity<>(respuesta, HttpStatus.OK);
 

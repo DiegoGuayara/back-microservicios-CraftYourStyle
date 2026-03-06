@@ -17,7 +17,10 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ message: "Token inválido o expirado" });
   }
 
-  if (payload.role !== "ADMIN") {
+  const normalizedRole =
+    typeof payload.role === "string" ? payload.role.toUpperCase().trim() : "";
+
+  if (normalizedRole !== "ADMIN") {
     return res.status(403).json({ message: "No tienes permisos de administrador" });
   }
 

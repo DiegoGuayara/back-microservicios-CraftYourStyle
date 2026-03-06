@@ -16,4 +16,11 @@ export interface Factura {
   fecha_emision: string;
   fecha_vencimiento: string;
   estado: 'PENDIENTE' | 'PAGADA' | 'VENCIDA';
+  // Campos de compatibilidad para UI de pedidos en frontend
+  customerName?: string;
+  customerEmail?: string;
+  date?: string;
+  items?: number;
+  total?: number;
+  status?: "confirmado" | "enviado" | "pendiente";
 }

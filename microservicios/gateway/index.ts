@@ -51,6 +51,10 @@ const routes = {
     target: process.env.AGENTE_IA_URL || "http://agente-ia:10105",
     pathRewrite: { "^/api/agente-ia": "" }, // Remueve /api/agente-ia del path
   },
+  "/api/generate": {
+    target: process.env.AGENTE_IA_URL || "http://agente-ia:10105",
+    pathRewrite: { "^/api/generate": "/generate" }, // Compatibilidad legacy nanoService
+  },
   "/api/catalogo": {
     target: process.env.CATALOGO_URL || "http://catalogo:10103",
     pathRewrite: { "^/api/catalogo": "" }, // Remueve /api/catalogo del path

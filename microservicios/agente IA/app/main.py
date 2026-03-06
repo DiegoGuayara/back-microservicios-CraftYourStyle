@@ -4,7 +4,7 @@ from fastapi import FastAPI
 # CORSMiddleware - Middleware para manejar CORS (Cross-Origin Resource Sharing)
 from fastapi.middleware.cors import CORSMiddleware
 # Importa todos los routers (grupos de endpoints)
-from app.routes import chat_router, images_router, tryon_router
+from app.routes import chat_router, images_router, tryon_router, legacy_generate_router
 # Importa la configuración de la aplicación
 from app.config.settings import settings
 # Uvicorn - Servidor ASGI para correr la aplicación FastAPI
@@ -27,7 +27,7 @@ app = FastAPI(
 # Sin CORS, los navegadores bloquearían las peticiones por seguridad
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # "*" permite todos los orígenes (EN PRODUCCIÓN: especificar dominios exactos)
+    allow_origins=settings.cors_origins_list if settings.cors_origins_list else ["http://localhost:5173"],
     allow_credentials=True,  # Permite enviar cookies y headers de autenticación
     allow_methods=["*"],  # Permite todos los métodos HTTP (GET, POST, PUT, DELETE, etc.)
     allow_headers=["*"],  # Permite todos los headers
@@ -41,6 +41,7 @@ app.add_middleware(
 app.include_router(chat_router)  # Endpoints de chat: /chat/*
 app.include_router(images_router)  # Endpoints de imágenes: /images/*
 app.include_router(tryon_router)  # Endpoints de virtual try-on: /tryon/*
+app.include_router(legacy_generate_router)  # Endpoint legacy: /generate
 
 
 # ==================== ENDPOINTS PRINCIPALES ====================

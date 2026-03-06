@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     
     # ==================== CONFIGURACIÓN DEL SERVIDOR ====================
     PORT: int = 10105  # Puerto en el que escucha este microservicio
+    ENVIRONMENT: str = "development"  # development | staging | production
+    CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
     
     # ==================== API DE INTELIGENCIA ARTIFICIAL ====================
     # Gemini (Google AI) - Para el agente conversacional de IA
@@ -62,7 +64,7 @@ class Settings(BaseSettings):
     
     # ==================== AUTENTICACIÓN JWT ====================
     # JSON Web Tokens - Para autenticar usuarios
-    JWT_SECRET: str = "your_jwt_secret_here"  # Clave secreta (cambiar en producción)
+    JWT_SECRET: Optional[str] = None  # Obligatorio en producción
     JWT_ALGORITHM: str = "HS256"  # Algoritmo de encriptación
     
     # ==================== CONFIGURACIÓN DE PYDANTIC ====================
@@ -86,6 +88,18 @@ class Settings(BaseSettings):
             str: URL completa de conexión
         """
         return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [origin.strip().rstrip("/") for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+
+    @property
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT.lower() in {"production", "prod"}
+
+    def model_post_init(self, __context) -> None:
+        if self.is_production and not self.JWT_SECRET:
+            raise ValueError("JWT_SECRET es obligatorio cuando ENVIRONMENT=production")
 
 
 # ==================== INSTANCIA GLOBAL ====================
