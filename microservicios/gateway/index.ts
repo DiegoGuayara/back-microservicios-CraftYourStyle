@@ -69,7 +69,8 @@ const routes = {
   },
   "/api/admin": {
     target: process.env.ADMIN_URL || "http://admin:3000",
-    pathRewrite: { "^/api/admin": "/admin" }, // /api/admin/x -> /admin/x
+    // Express elimina /api/admin al entrar a este middleware; aquí lo volvemos a anteponer.
+    pathRewrite: (path: string) => (path === "/" ? "/admin" : `/admin${path}`),
   },
 };
 

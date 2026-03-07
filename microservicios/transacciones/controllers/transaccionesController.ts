@@ -87,8 +87,8 @@ export class TransaccionesController {
         id: result,
       });
     } catch (error) {
-      res.status(500).json({ message: "Error al crear la transacción", error });
       console.error("Error al crear la transacción:", error);
+      res.status(500).json({ message: "Error al crear la transacción" });
     }
   }
 
@@ -251,7 +251,7 @@ export class TransaccionesController {
       res.status(200).json({ message: "Cuenta eliminada correctamente" });
     } catch (error) {
       console.error("Error al eliminar la cuenta:", error);
-      res.status(500).json({ message: "Error al eliminar la cuenta", error });
+      res.status(500).json({ message: "Error al eliminar la cuenta" });
     }
   }
 }

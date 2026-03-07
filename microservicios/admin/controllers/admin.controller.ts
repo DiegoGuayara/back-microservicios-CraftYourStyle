@@ -53,7 +53,9 @@ export class AdminController {
                 imagen,
                 image_url,
                 descripcion,
-                talla
+                talla,
+                genero,
+                gender
             } = req.body as {
                 nombre?: string;
                 categoria?: string;
@@ -63,10 +65,17 @@ export class AdminController {
                 image_url?: string;
                 descripcion?: string;
                 talla?: string;
+                genero?: string;
+                gender?: string;
             };
 
             const imagenFinal = typeof imagen === "string" && imagen.trim() ? imagen.trim() : image_url?.trim();
             const categoryIdDirecto = category_id !== undefined ? Number(category_id) : null;
+            const generoFinal = typeof genero === "string" && genero.trim()
+                ? genero.trim()
+                : typeof gender === "string" && gender.trim()
+                    ? gender.trim()
+                    : "Unisex";
 
             if (!nombre || price === undefined || !imagenFinal || (!categoria && category_id === undefined)) {
                 return res.status(400).json({
@@ -131,7 +140,8 @@ export class AdminController {
                     imagen_url: imagenFinal,
                     categoria_id: categoryId,
                     price: precioParseado,
-                    talla: talla?.trim() || "UNICA"
+                    talla: talla?.trim() || "UNICA",
+                    genero: generoFinal
                 },
                 { timeout: 10000 }
             );

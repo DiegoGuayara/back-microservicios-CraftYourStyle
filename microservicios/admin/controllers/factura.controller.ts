@@ -2,6 +2,25 @@ import type { Request, Response } from "express";
 import { FacturaService, FacturaServiceError } from "../services/factura.services.js";
 
 export class FacturaController {
+  private static isNumericId(value: unknown): value is string {
+    return typeof value === "string" && /^[0-9]+$/.test(value.trim());
+  }
+
+  private static getUserIdFromRequest(req: Request): string {
+    const bodyUserId = req.body?.id_usuario;
+    if (this.isNumericId(bodyUserId)) {
+      return bodyUserId.trim();
+    }
+
+    const auth = req.auth;
+    const candidates = [auth?.id, auth?.userId, auth?.usuarioId, auth?.sub];
+    const resolved = candidates.find((value) => this.isNumericId(value));
+    if (!resolved) {
+      throw new FacturaServiceError("No se pudo identificar un id_usuario numérico", 400);
+    }
+    return resolved.trim();
+  }
+
   private static getParamAsString(value: string | string[] | undefined, name: string): string {
     if (typeof value !== "string" || !value.trim()) {
       throw new FacturaServiceError(`Parámetro inválido: ${name}`, 400);
@@ -15,12 +34,43 @@ export class FacturaController {
       return res.status(error.status).json({ message: error.message });
     }
 
+    console.error("Error interno en módulo de facturas:", error);
     return res.status(500).json({ message: "Error interno en módulo de facturas" });
+  }
+
+  static async obtenerTodasLasFacturas(_req: Request, res: Response) {
+    try {
+      const facturas = await FacturaService.obtenerTodasLasFacturas();
+      return res.status(200).json({
+        message: "Facturas obtenidas correctamente",
+        data: facturas,
+      });
+    } catch (error: unknown) {
+      return this.handleError(error, res);
+    }
   }
 
   static async crearFactura(req: Request, res: Response) {
     try {
       const { factura, notificacion } = await FacturaService.crearFactura(req.body);
+      return res.status(201).json({
+        message: "Factura creada y enviada por correo correctamente",
+        data: { factura, notificacion },
+      });
+    } catch (error: unknown) {
+      return this.handleError(error, res);
+    }
+  }
+
+  static async crearFacturaCliente(req: Request, res: Response) {
+    try {
+      const id_usuario = this.getUserIdFromRequest(req);
+      const payload = {
+        ...req.body,
+        id_usuario,
+      };
+
+      const { factura, notificacion } = await FacturaService.crearFactura(payload);
       return res.status(201).json({
         message: "Factura creada y enviada por correo correctamente",
         data: { factura, notificacion },

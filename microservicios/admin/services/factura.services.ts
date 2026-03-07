@@ -40,13 +40,6 @@ interface DetalleRow extends RowDataPacket {
   subtotal: number;
 }
 
-const toUiStatus = (
-  estado: "PENDIENTE" | "PAGADA" | "VENCIDA"
-): "confirmado" | "enviado" | "pendiente" => {
-  if (estado === "PAGADA") return "confirmado";
-  if (estado === "VENCIDA") return "enviado";
-  return "pendiente";
-};
 
 export class FacturaServiceError extends Error {
   status: number;
@@ -95,7 +88,6 @@ export class FacturaService {
   }
 
   private static mapFactura(factura: FacturaRow, productos: ProductoFactura[]): Factura {
-    const fechaEmisionIso = new Date(factura.fecha_emision).toISOString();
     return {
       id: factura.id,
       id_usuario: factura.id_usuario,
@@ -104,15 +96,9 @@ export class FacturaService {
       productos,
       total_productos: factura.total_productos,
       valor_total: Number(factura.valor_total),
-      fecha_emision: fechaEmisionIso,
+      fecha_emision: new Date(factura.fecha_emision).toISOString(),
       fecha_vencimiento: new Date(factura.fecha_vencimiento).toISOString(),
       estado: factura.estado,
-      customerName: factura.nombre_usuario,
-      customerEmail: factura.correo_usuario,
-      date: fechaEmisionIso.slice(0, 10),
-      items: factura.total_productos,
-      total: Number(factura.valor_total),
-      status: toUiStatus(factura.estado),
     };
   }
 
@@ -232,12 +218,6 @@ export class FacturaService {
         fecha_emision: fechaEmision.toISOString(),
         fecha_vencimiento: fechaVencimiento.toISOString(),
         estado,
-        customerName: nombre_usuario,
-        customerEmail: correo_usuario,
-        date: fechaEmision.toISOString().slice(0, 10),
-        items: total_productos,
-        total: valor_total,
-        status: toUiStatus(estado),
       };
 
       // Enviar factura por correo automáticamente
@@ -278,6 +258,23 @@ export class FacturaService {
        WHERE id_usuario = ?
        ORDER BY fecha_emision DESC`,
       [idUsuario]
+    );
+
+    const resultado: Factura[] = [];
+    for (const factura of facturas) {
+      const productos = await this.getDetallesByFacturaId(factura.id);
+      resultado.push(this.mapFactura(factura, productos));
+    }
+
+    return resultado;
+  }
+
+  static async obtenerTodasLasFacturas(): Promise<Factura[]> {
+    const [facturas] = await pool.query<FacturaRow[]>(
+      `SELECT id, id_usuario, nombre_usuario, correo_usuario, total_productos,
+              valor_total, fecha_emision, fecha_vencimiento, estado
+       FROM facturas
+       ORDER BY fecha_emision DESC`
     );
 
     const resultado: Factura[] = [];
