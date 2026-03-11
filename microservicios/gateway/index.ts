@@ -53,7 +53,7 @@ const routes = {
   },
   "/api/generate": {
     target: process.env.AGENTE_IA_URL || "http://agente-ia:10105",
-    pathRewrite: { "^/api/generate": "/generate" }, // Compatibilidad legacy nanoService
+    pathRewrite: { "^/": "/generate" }, // Compatibilidad legacy nanoService
   },
   "/api/catalogo": {
     target: process.env.CATALOGO_URL || "http://catalogo:10103",
@@ -144,3 +144,5 @@ app.listen(PORT, () => {
     console.log(`  ${path} -> ${config.target}`);
   });
 });
+
+

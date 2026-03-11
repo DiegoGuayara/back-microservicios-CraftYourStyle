@@ -563,6 +563,7 @@ Authorization: Bearer <JWT_TOKEN_ADMIN>
 ### 7.2 Generar imagen (ruta legacy compatible)
 - **Método:** `POST`
 - **URL:** `http://localhost:1010/api/generate`
+- **Nota:** El gateway reescribe `/api/generate` → `/generate` en el micro de agente IA.
 - **Body:**
 ```json
 {
@@ -624,7 +625,7 @@ Authorization: Bearer <JWT_TOKEN_ADMIN>
 - **Body:**
 ```json
 {
-  "message": "¿Qué me recomiendas para un look casual?"
+  "mensaje": "¿Qué me recomiendas para un look casual?"
 }
 ```
 - **Respuesta esperada:** `200 OK` — Respuesta del agente IA.
