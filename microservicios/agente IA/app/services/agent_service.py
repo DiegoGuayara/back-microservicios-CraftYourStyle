@@ -125,11 +125,16 @@ class AgentService:
                     garment_type="camiseta"  # Puede ser dinámico
                 )
                 design_prompt = orchestrator._extract_text(design_prompt_response)
+                design_prompt = DesignGenerationService.apply_plain_constraints(
+                    design_prompt, user_message
+                )
+                negative_prompt = DesignGenerationService.build_negative_prompt(user_message)
                 
                 # Generar la imagen
                 try:
                     image_url = await DesignGenerationService.generate_design_image(
-                        prompt=design_prompt
+                        prompt=design_prompt,
+                        negative_prompt=negative_prompt
                     )
                     
                     # Generar respuesta del agente con la imagen
@@ -174,3 +179,5 @@ class AgentService:
             "mensaje": respuesta_texto,
             "imagenes_generadas": imagenes_generadas or None
         }
+
+

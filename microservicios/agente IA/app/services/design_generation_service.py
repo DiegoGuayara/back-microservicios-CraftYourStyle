@@ -8,11 +8,48 @@ from app.config.settings import settings
 
 class DesignGenerationService:
     """Servicio para generar imágenes de diseños usando Replicate (Stable Diffusion XL)"""
-    
+
+    DEFAULT_NEGATIVE_PROMPT = "low quality, blurry, distorted, deformed"
+
+    @staticmethod
+    def apply_plain_constraints(prompt: str, user_request: str | None) -> str:
+        if not user_request:
+            return prompt
+
+        message_lower = user_request.lower()
+        plain_markers = [
+            "liso", "sin estampado", "sin diseno", "sin diseño", "sin patrones", "sin patron",
+            "sin rayas", "plain", "solid", "no pattern", "no stripes", "minimalista"
+        ]
+
+        if any(marker in message_lower for marker in plain_markers):
+            prompt_lower = prompt.lower()
+            if "no pattern" not in prompt_lower and "solid color" not in prompt_lower:
+                return f"{prompt}, solid color, no pattern, no stripes, no print"
+
+        return prompt
+
+    @staticmethod
+    def build_negative_prompt(user_request: str | None) -> str:
+        negative_parts = [DesignGenerationService.DEFAULT_NEGATIVE_PROMPT]
+        if not user_request:
+            return ", ".join(negative_parts)
+
+        message_lower = user_request.lower()
+        plain_markers = [
+            "liso", "sin estampado", "sin diseno", "sin diseño", "sin patrones", "sin patron",
+            "sin rayas", "plain", "solid", "no pattern", "no stripes", "minimalista"
+        ]
+
+        if any(marker in message_lower for marker in plain_markers):
+            negative_parts.append("pattern, stripes, striped, print, texture, graphic, logo, text")
+
+        return ", ".join(negative_parts)
+
     @staticmethod
     async def generate_design_image(
         prompt: str,
-        negative_prompt: str = "low quality, blurry, distorted, deformed",
+        negative_prompt: str | None = None,
         width: int = 1024,
         height: int = 1024
     ) -> str:
@@ -31,6 +68,9 @@ class DesignGenerationService:
         # Verificar si hay API token configurado
         replicate_token = settings.REPLICATE_API_TOKEN
         
+        if not negative_prompt:
+            negative_prompt = DesignGenerationService.DEFAULT_NEGATIVE_PROMPT
+
         if not replicate_token:
             raise ValueError(
                 "REPLICATE_API_TOKEN no está configurado. "
@@ -129,3 +169,7 @@ class DesignGenerationService:
         ]
         message_lower = user_message.lower()
         return any(keyword in message_lower for keyword in keywords)
+
+
+
+
