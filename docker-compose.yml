@@ -57,7 +57,7 @@ services:
       DB_HOST: host.docker.internal
       DB_USER: root
       DB_PASSWORD: ""
-      DB_NAME: CraftYourStyle_Personalizacion
+      DB_NAME: CraftYourStyle_AgenteIA
       DB_PORT: 3306
       PORT: 10105
       RABBITMQ_HOST: rabbitmq
@@ -157,3 +157,4 @@ services:
 networks:
   microservices-network:
     driver: bridge
+

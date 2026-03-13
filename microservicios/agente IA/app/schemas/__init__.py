@@ -8,7 +8,11 @@ from .chat import (
 from .image import (
     ImagenUploadResponse,
     FotoUsuarioCreate,
-    FotoUsuarioResponse
+    FotoUsuarioResponse,
+    ImagenSaveRequest,
+    ImagenSavedResponse,
+    ImagenAprobacionRequest,
+    ImagenAdminResponse
 )
 from .tryon import (
     TryOnRequest,
@@ -25,6 +29,10 @@ __all__ = [
     "ImagenUploadResponse",
     "FotoUsuarioCreate",
     "FotoUsuarioResponse",
+    "ImagenSaveRequest",
+    "ImagenSavedResponse",
+    "ImagenAprobacionRequest",
+    "ImagenAdminResponse",
     "TryOnRequest",
     "TryOnResponse",
     "TryOnFavoritoRequest"

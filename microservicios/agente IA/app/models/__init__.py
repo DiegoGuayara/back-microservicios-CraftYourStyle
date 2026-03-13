@@ -1,6 +1,6 @@
 from .sesion import SesionIA, EstadoSesion
 from .mensaje import MensajeIA, TipoMensaje
-from .imagen import Imagen, TipoImagen
+from .imagen import Imagen, TipoImagen, EstadoImagen
 from .foto_usuario import FotoUsuario
 from .prueba_virtual import PruebaVirtual
 from .personalizacion import Personalizacion
@@ -12,6 +12,7 @@ __all__ = [
     "TipoMensaje",
     "Imagen",
     "TipoImagen",
+    "EstadoImagen",
     "FotoUsuario",
     "PruebaVirtual",
     "Personalizacion"
