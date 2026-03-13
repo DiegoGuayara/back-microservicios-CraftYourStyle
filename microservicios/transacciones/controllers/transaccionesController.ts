@@ -8,7 +8,7 @@
  */
 
 import type { Request, Response } from "express";
-import type { TransaccionDto } from "../DTO/transaccionesDto.js";
+import type { BancoDto, TransaccionDto } from "../DTO/transaccionesDto.js";
 import { TransaccionesRepository } from "../repository/transaccionesRepository.js";
 import axios from "axios";
 
@@ -22,6 +22,141 @@ export class TransaccionesController {
       res.setHeader("Deprecation", "true");
       res.setHeader("Sunset", "Wed, 30 Sep 2026 23:59:59 GMT");
       res.setHeader("Link", "</api/transacciones/transacciones>; rel=\"successor-version\"");
+    }
+  }
+
+  /**
+   * Obtiene el catalogo de bancos disponibles
+   *
+   * Ruta: GET /transacciones/obtenerBancos
+   */
+  static async obtenerBancos(req: Request, res: Response) {
+    try {
+      this.markLegacyRoute(req, res);
+      const bancos = await TransaccionesRepository.getBanks();
+
+      res.status(200).json({
+        message: "Bancos obtenidos correctamente",
+        data: bancos,
+        bancos,
+      });
+    } catch (error) {
+      console.error("Error obteniendo bancos:", error);
+      res.status(500).json({ message: "Error obteniendo bancos" });
+    }
+  }
+
+  /**
+   * Crea un banco en el catalogo
+   *
+   * Ruta: POST /transacciones/crearBanco
+   */
+  static async crearBanco(req: Request, res: Response) {
+    try {
+      this.markLegacyRoute(req, res);
+      const nombre = String(req.body.nombre ?? req.body.bankName ?? "").trim();
+
+      if (!nombre) {
+        res.status(400).json({ message: "El nombre del banco es obligatorio" });
+        return;
+      }
+
+      const existingBank = await TransaccionesRepository.findBankByName(nombre);
+
+      if (existingBank) {
+        res.status(400).json({ message: "Ese banco ya existe" });
+        return;
+      }
+
+      const newBank: BancoDto = { nombre };
+      const result: any = await TransaccionesRepository.createBank(newBank);
+      const createdBank = await TransaccionesRepository.findBankById(
+        Number(result?.insertId)
+      );
+
+      res.status(201).json({
+        message: "Banco creado correctamente",
+        data: createdBank ?? { id: result?.insertId ?? null, nombre },
+      });
+    } catch (error) {
+      console.error("Error creando banco:", error);
+      res.status(500).json({ message: "Error creando banco" });
+    }
+  }
+
+  /**
+   * Actualiza un banco del catalogo
+   *
+   * Ruta: PATCH /transacciones/actualizarBanco/:id
+   */
+  static async actualizarBanco(req: Request, res: Response) {
+    try {
+      this.markLegacyRoute(req, res);
+      const bankId = Number(req.params.id);
+      const nombre = String(req.body.nombre ?? req.body.bankName ?? "").trim();
+
+      if (!Number.isFinite(bankId)) {
+        res.status(400).json({ message: "Id de banco invalido" });
+        return;
+      }
+
+      if (!nombre) {
+        res.status(400).json({ message: "El nombre del banco es obligatorio" });
+        return;
+      }
+
+      const existingBank = await TransaccionesRepository.findBankByName(nombre);
+
+      if (existingBank && Number(existingBank.id) !== bankId) {
+        res.status(400).json({ message: "Ese banco ya existe" });
+        return;
+      }
+
+      const result = await TransaccionesRepository.updateBank(bankId, nombre);
+
+      if (!result) {
+        res.status(404).json({ message: "Banco no encontrado" });
+        return;
+      }
+
+      const updatedBank = await TransaccionesRepository.findBankById(bankId);
+
+      res.status(200).json({
+        message: "Banco actualizado correctamente",
+        data: updatedBank ?? { id: bankId, nombre },
+      });
+    } catch (error) {
+      console.error("Error actualizando banco:", error);
+      res.status(500).json({ message: "Error actualizando banco" });
+    }
+  }
+
+  /**
+   * Elimina un banco del catalogo
+   *
+   * Ruta: DELETE /transacciones/eliminarBanco/:id
+   */
+  static async eliminarBanco(req: Request, res: Response) {
+    try {
+      this.markLegacyRoute(req, res);
+      const bankId = Number(req.params.id);
+
+      if (!Number.isFinite(bankId)) {
+        res.status(400).json({ message: "Id de banco invalido" });
+        return;
+      }
+
+      const result = await TransaccionesRepository.deleteBank(bankId);
+
+      if (!result) {
+        res.status(404).json({ message: "Banco no encontrado" });
+        return;
+      }
+
+      res.status(200).json({ message: "Banco eliminado correctamente" });
+    } catch (error) {
+      console.error("Error eliminando banco:", error);
+      res.status(500).json({ message: "Error eliminando banco" });
     }
   }
 

@@ -5,10 +5,67 @@
  * Permite a los usuarios registrar sus métodos de pago para realizar compras.
  */
 
-import type { TransaccionDto } from "../DTO/transaccionesDto.js";
+import type { BancoDto, TransaccionDto } from "../DTO/transaccionesDto.js";
 import pool from "../config/db-config.js";
 
 export class TransaccionesRepository {
+  static async getBanks() {
+    const [rows]: any = await pool.query(
+      "SELECT id, nombre FROM bancos ORDER BY nombre ASC"
+    );
+    return rows;
+  }
+
+  static async findBankById(id: number) {
+    const [rows]: any = await pool.query(
+      "SELECT id, nombre FROM bancos WHERE id = ?",
+      [id]
+    );
+    return rows[0];
+  }
+
+  static async findBankByName(nombre: string) {
+    const [rows]: any = await pool.query(
+      "SELECT id, nombre FROM bancos WHERE LOWER(nombre) = LOWER(?)",
+      [nombre]
+    );
+    return rows[0];
+  }
+
+  static async createBank(banco: BancoDto) {
+    const [result] = await pool.query(
+      "INSERT INTO bancos (nombre) VALUES (?)",
+      [banco.nombre]
+    );
+    return result;
+  }
+
+  static async updateBank(id: number, nombre: string) {
+    const [resultDb]: any = await pool.query(
+      "UPDATE bancos SET nombre = ? WHERE id = ?",
+      [nombre, id]
+    );
+
+    if (resultDb.affectedRows === 0) {
+      return null;
+    }
+
+    return resultDb;
+  }
+
+  static async deleteBank(id: number) {
+    const [resultDb]: any = await pool.query(
+      "DELETE FROM bancos WHERE id = ?",
+      [id]
+    );
+
+    if (resultDb.affectedRows === 0) {
+      return null;
+    }
+
+    return resultDb;
+  }
+
   /**
    * Crea una nueva cuenta bancaria para un usuario
    * 
