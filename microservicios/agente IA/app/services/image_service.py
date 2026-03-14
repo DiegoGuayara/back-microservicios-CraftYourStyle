@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models import Imagen, FotoUsuario, TipoImagen, EstadoImagen
-from app.config.storage import upload_image, delete_image
+from app.config.storage import upload_image, upload_remote_image, delete_image
 from fastapi import UploadFile
 from typing import Optional
 import os
@@ -9,6 +9,26 @@ import uuid
 
 class ImageService:
     """Servicio para manejo de imágenes"""
+
+    @staticmethod
+    async def _persist_remote_image_if_needed(image_url: str, folder: str) -> str:
+        normalized_url = (image_url or "").strip()
+        if not normalized_url:
+            raise ValueError("La URL de la imagen es obligatoria")
+
+        is_remote_url = normalized_url.startswith("http://") or normalized_url.startswith("https://")
+        already_stable = "res.cloudinary.com" in normalized_url
+
+        if not is_remote_url or already_stable:
+            return normalized_url
+
+        uploaded_result = await upload_remote_image(normalized_url, folder=folder)
+        stable_url = uploaded_result.get("url")
+
+        if not stable_url:
+            raise Exception("No se pudo almacenar la imagen remota en Cloudinary")
+
+        return stable_url
 
     @staticmethod
     def _serialize_image_row(row):
@@ -159,9 +179,14 @@ class ImageService:
         garment_type: Optional[str] = None
     ) -> Imagen:
         """Guarda una URL de imagen generada (sin subir archivo)."""
+        stable_image_url = await ImageService._persist_remote_image_if_needed(
+            image_url,
+            folder=f"users/{id_user}/generated"
+        )
+
         imagen = Imagen(
             id_user=id_user,
-            image_url=image_url,
+            image_url=stable_image_url,
             variant_id=variant_id,
             tipo=getattr(tipo, "value", tipo) or "usuario_diseño",
             prompt=prompt,
