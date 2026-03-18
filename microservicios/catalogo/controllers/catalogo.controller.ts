@@ -35,12 +35,10 @@ export class CatalogoController {
         data: resultado,
       });
     } catch (error) {
+      console.error("Error al crear la categoria:", error);
       res.status(500).json({
         message: "Error al crear la categoria",
-        error: error,
       });
-
-      console.error("Error: ", error);
     }
   }
 
@@ -49,24 +47,17 @@ export class CatalogoController {
     try {
       const categorias = await CategoriaRepository.obtenerCategorias();
 
-      if (categorias.length === 0) {
-        res.status(404).json({
-          message: "No se encontraron categorias",
-        });
-        return;
-      }
-
       res.status(200).json({
-        message: "Categorias obtenidas exitosamente",
+        message: categorias.length > 0
+          ? "Categorias obtenidas exitosamente"
+          : "No se encontraron categorias",
         data: categorias,
       });
     } catch (error) {
+      console.error("Error al obtener las categorias:", error);
       res.status(500).json({
         message: "Error al obtener las categorias",
-        error: error,
       });
-
-      console.error("Error", error);
     }
   }
 
@@ -91,12 +82,10 @@ export class CatalogoController {
         data: categoria,
       });
     } catch (error) {
+      console.error("Error al obtener la categoria:", error);
       res.status(500).json({
         message: "Error al obtener la categoria",
-        error: error,
       });
-
-      console.error("Error", error);
     }
   }
 
@@ -121,12 +110,10 @@ export class CatalogoController {
         data: resultado,
       });
     } catch (error) {
+      console.error("Error al eliminar la categoria:", error);
       res.status(500).json({
         message: "Error al eliminar la categoria",
-        error: error,
       });
-
-      console.error("Error", error);
     }
   }
 
@@ -160,12 +147,10 @@ export class CatalogoController {
         data: resultado,
       });
     } catch (error) {
+      console.error("Error al actualizar la categoria:", error);
       res.status(500).json({
         message: "Error al actualizar la categoria",
-        error: error,
       });
-
-      console.error("Error", error);
     }
   }
 }

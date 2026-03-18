@@ -38,6 +38,33 @@ async def upload_image(file_path: str, folder: str = "craftyourstyle") -> dict:
         raise Exception(f"Error al subir imagen: {str(e)}")
 
 
+async def upload_remote_image(image_url: str, folder: str = "craftyourstyle") -> dict:
+    """
+    Sube una imagen remota a Cloudinary a partir de su URL.
+
+    Args:
+        image_url: URL pública de la imagen remota
+        folder: Carpeta en Cloudinary
+
+    Returns:
+        dict con url, public_id, etc.
+    """
+    try:
+        result = cloudinary.uploader.upload(
+            image_url,
+            folder=folder,
+            resource_type="image"
+        )
+        return {
+            "url": result.get("secure_url"),
+            "public_id": result.get("public_id"),
+            "width": result.get("width"),
+            "height": result.get("height")
+        }
+    except Exception as e:
+        raise Exception(f"Error al subir imagen remota: {str(e)}")
+
+
 async def delete_image(public_id: str) -> bool:
     """
     Elimina una imagen de Cloudinary

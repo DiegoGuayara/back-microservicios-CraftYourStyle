@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     # Replicate - Plataforma para ejecutar modelos de IA
     # Usado para generar imágenes de diseños de prendas
     REPLICATE_API_TOKEN: Optional[str] = None
+    REPLICATE_IMAGE_MODEL: str = "google/nano-banana-pro"
     
     # ==================== MENSAJERÍA ENTRE MICROSERVICIOS ====================
     # RabbitMQ - Sistema de colas para comunicación asíncrona entre microservicios

@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from app.models import Imagen, FotoUsuario, TipoImagen
-from app.config.storage import upload_image, delete_image
+from app.models import Imagen, FotoUsuario, TipoImagen, EstadoImagen
+from app.config.storage import upload_image, upload_remote_image, delete_image
 from fastapi import UploadFile
 from typing import Optional
 import os
@@ -9,6 +9,42 @@ import uuid
 
 class ImageService:
     """Servicio para manejo de imágenes"""
+
+    @staticmethod
+    async def _persist_remote_image_if_needed(image_url: str, folder: str) -> str:
+        normalized_url = (image_url or "").strip()
+        if not normalized_url:
+            raise ValueError("La URL de la imagen es obligatoria")
+
+        is_remote_url = normalized_url.startswith("http://") or normalized_url.startswith("https://")
+        already_stable = "res.cloudinary.com" in normalized_url
+
+        if not is_remote_url or already_stable:
+            return normalized_url
+
+        uploaded_result = await upload_remote_image(normalized_url, folder=folder)
+        stable_url = uploaded_result.get("url")
+
+        if not stable_url:
+            raise Exception("No se pudo almacenar la imagen remota en Cloudinary")
+
+        return stable_url
+
+    @staticmethod
+    def _serialize_image_row(row):
+        return {
+            "id": row.id,
+            "id_user": row.id_user,
+            "image_url": row.image_url,
+            "variant_id": getattr(row, "variant_id", None),
+            "tipo": "usuario_diseño",
+            "prompt": getattr(row, "prompt", None),
+            "garment_type": getattr(row, "garment_type", None),
+            "estado": getattr(row, "estado", None),
+            "precio": float(row.precio) if getattr(row, "precio", None) is not None else None,
+            "created_at": getattr(row, "created_at", None),
+            "updated_at": getattr(row, "updated_at", None),
+        }
     
     @staticmethod
     async def save_user_design_image(
@@ -43,9 +79,10 @@ class ImageService:
             
             # Guardar en BD
             imagen = Imagen(
+                id_user=id_user,
                 image_url=result["url"],
                 variant_id=variant_id,
-                tipo=TipoImagen.USUARIO_DISEÑO
+                tipo="usuario_diseño"
             )
             db.add(imagen)
             db.commit()
@@ -130,3 +167,137 @@ class ImageService:
             db.commit()
             return True
         return False
+
+    @staticmethod
+    async def save_generated_image_url(
+        db: Session,
+        id_user: int,
+        image_url: str,
+        variant_id: Optional[int] = None,
+        tipo: TipoImagen = TipoImagen.USUARIO_DISEÑO,
+        prompt: Optional[str] = None,
+        garment_type: Optional[str] = None
+    ) -> Imagen:
+        """Guarda una URL de imagen generada (sin subir archivo)."""
+        stable_image_url = await ImageService._persist_remote_image_if_needed(
+            image_url,
+            folder=f"users/{id_user}/generated"
+        )
+
+        imagen = Imagen(
+            id_user=id_user,
+            image_url=stable_image_url,
+            variant_id=variant_id,
+            tipo=getattr(tipo, "value", tipo) or "usuario_diseño",
+            prompt=prompt,
+            garment_type=garment_type,
+            estado="pendiente"
+        )
+        db.add(imagen)
+        db.commit()
+        db.refresh(imagen)
+        return imagen
+
+    @staticmethod
+    async def get_user_designs(db: Session, id_user: int, estado: Optional[str] = None):
+        """Obtiene diseños guardados por usuario."""
+        query = db.query(
+            Imagen.id,
+            Imagen.id_user,
+            Imagen.image_url,
+            Imagen.variant_id,
+            Imagen.prompt,
+            Imagen.garment_type,
+            Imagen.estado,
+            Imagen.precio,
+            Imagen.created_at,
+            Imagen.updated_at,
+        ).filter(Imagen.id_user == id_user)
+        if estado:
+            query = query.filter(Imagen.estado == estado)
+        rows = query.order_by(Imagen.id.desc()).all()
+        return [ImageService._serialize_image_row(row) for row in rows]
+
+    @staticmethod
+    async def delete_user_design(db: Session, image_id: int, id_user: int) -> bool:
+        """Elimina un diseño guardado del usuario."""
+        imagen = db.query(Imagen).filter(
+            Imagen.id == image_id,
+            Imagen.id_user == id_user
+        ).first()
+        if imagen:
+            db.delete(imagen)
+            db.commit()
+            return True
+        return False
+
+    @staticmethod
+    async def get_pending_designs(db: Session):
+        """Obtiene diseños pendientes de aprobación."""
+        rows = db.query(
+            Imagen.id,
+            Imagen.id_user,
+            Imagen.image_url,
+            Imagen.prompt,
+            Imagen.garment_type,
+            Imagen.estado,
+            Imagen.precio,
+            Imagen.created_at,
+        ).filter(
+            Imagen.id_user.isnot(None),
+            Imagen.estado == "pendiente"
+        ).order_by(Imagen.created_at.desc()).all()
+        return [ImageService._serialize_image_row(row) for row in rows]
+
+    @staticmethod
+    async def approve_design(db: Session, image_id: int, precio: float) -> Optional[Imagen]:
+        """Aprueba un diseño y asigna precio."""
+        updated = db.query(Imagen).filter(Imagen.id == image_id).update(
+            {
+                Imagen.estado: "aprobada",
+                Imagen.precio: precio,
+            },
+            synchronize_session=False,
+        )
+        if not updated:
+            return None
+        db.commit()
+        row = db.query(
+            Imagen.id,
+            Imagen.id_user,
+            Imagen.image_url,
+            Imagen.variant_id,
+            Imagen.prompt,
+            Imagen.garment_type,
+            Imagen.estado,
+            Imagen.precio,
+            Imagen.created_at,
+            Imagen.updated_at,
+        ).filter(Imagen.id == image_id).first()
+        return ImageService._serialize_image_row(row) if row else None
+
+    @staticmethod
+    async def reject_design(db: Session, image_id: int) -> Optional[Imagen]:
+        """Rechaza un diseño."""
+        updated = db.query(Imagen).filter(Imagen.id == image_id).update(
+            {
+                Imagen.estado: "rechazada",
+            },
+            synchronize_session=False,
+        )
+        if not updated:
+            return None
+        db.commit()
+        row = db.query(
+            Imagen.id,
+            Imagen.id_user,
+            Imagen.image_url,
+            Imagen.variant_id,
+            Imagen.prompt,
+            Imagen.garment_type,
+            Imagen.estado,
+            Imagen.precio,
+            Imagen.created_at,
+            Imagen.updated_at,
+        ).filter(Imagen.id == image_id).first()
+        return ImageService._serialize_image_row(row) if row else None

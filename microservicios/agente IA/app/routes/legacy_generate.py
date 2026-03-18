@@ -44,15 +44,19 @@ async def legacy_generate(payload: LegacyGenerateRequest):
             prompt=payload.prompt.strip(),
             width=width,
             height=height,
+            image_input=payload.image,
+            creativity=payload.creativity,
         )
 
         return {
             "message": "Imagen generada exitosamente",
             "url": image_url,
             "imageUrl": image_url,
+            "generatedImage": image_url,
             "data": {
                 "url": image_url,
                 "imageUrl": image_url,
+                "generatedImage": image_url,
                 "aspectRatio": payload.aspectRatio,
                 "creativity": payload.creativity,
             },

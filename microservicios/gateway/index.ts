@@ -41,7 +41,7 @@ const DOCKER_FALLBACK_HOSTS = [
 
 type RouteConfig = {
   target: string;
-  pathRewrite: Record<string, string>;
+  pathRewrite: Record<string, string> | ((path: string) => string);
   envVar?: string;
   isFallback?: boolean;
 };
@@ -111,7 +111,8 @@ const routes: Record<string, RouteConfig> = {
   },
   "/api/generate": {
     target: agenteIaTarget.target,
-    pathRewrite: { "^/api/generate": "/generate" }, // Compatibilidad legacy nanoService
+    // Express monta el middleware en /api/generate y el path interno llega como /.
+    pathRewrite: (_path: string) => "/generate", // Compatibilidad legacy nanoService
     envVar: "AGENTE_IA_URL",
     isFallback: agenteIaTarget.isFallback,
   },
@@ -135,7 +136,8 @@ const routes: Record<string, RouteConfig> = {
   },
   "/api/admin": {
     target: adminTarget.target,
-    pathRewrite: { "^/api/admin": "/admin" }, // /api/admin/x -> /admin/x
+    // Express elimina /api/admin al entrar al middleware; aquí reponemos /admin.
+    pathRewrite: (path: string) => (path === "/" ? "/admin" : `/admin${path}`),
     envVar: "ADMIN_URL",
     isFallback: adminTarget.isFallback,
   },
@@ -234,3 +236,5 @@ app.listen(PORT, () => {
   });
   logDeploymentWarnings();
 });
+
+

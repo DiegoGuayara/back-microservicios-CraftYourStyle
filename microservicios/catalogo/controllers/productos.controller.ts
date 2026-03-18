@@ -11,6 +11,7 @@ import type { ProductosDto } from "../DTO/productosDto.js";
 
 export class ProductoController{
     private static normalizeProductInput(payload: any): ProductosDto {
+        const genero = payload.genero ?? payload.gender ?? "Unisex";
         return {
             nombre: payload.nombre ?? payload.name ?? "",
             descripcion: payload.descripcion ?? payload.description,
@@ -18,6 +19,7 @@ export class ProductoController{
             categoria_id: Number(payload.categoria_id ?? payload.category_id ?? 0),
             price: Number(payload.price ?? payload.precio ?? 0),
             talla: payload.talla ?? payload.size ?? "",
+            genero: typeof genero === "string" ? genero : "Unisex",
         };
     }
 
@@ -31,6 +33,7 @@ export class ProductoController{
             image: producto.imagen_url ?? producto.image_url ?? producto.image ?? "",
             description: producto.descripcion ?? null,
             size: producto.talla ?? null,
+            gender: producto.genero ?? null,
         };
     }
     /**
@@ -72,8 +75,8 @@ export class ProductoController{
                 id: result
             })
         }catch(error){
-            res.status(500).json({message:"Error al crear el producto", error})
             console.error("Error al crear el producto:", error)
+            res.status(500).json({message:"Error al crear el producto"})
         }
     }
 
@@ -90,17 +93,23 @@ export class ProductoController{
      */
     static async getProducts(req:Request,res:Response){
         try{
-            const producto = await ProductosRepository.obtenerProductos()
-            return !producto
-                ? res.status(404).json({message:"No se encontraron productos"})
-                : res.status(200).json({
-                    message:"Productos obtenidos correctamente",
-                    data:producto,
-                    data_ui: producto.map((p: any) => this.toUiProduct(p)),
-                })
+            const genero = typeof req.query.genero === "string"
+                ? req.query.genero
+                : typeof req.query.gender === "string"
+                    ? req.query.gender
+                    : undefined;
+            const producto = await ProductosRepository.obtenerProductos(genero)
+            const lista = producto ?? []
+            return res.status(200).json({
+                message: lista.length > 0
+                    ? "Productos obtenidos correctamente"
+                    : "No se encontraron productos",
+                data: lista,
+                data_ui: lista.map((p: any) => this.toUiProduct(p)),
+            })
         }catch(error){
-            res.status(500).json({message:"Error al obtener los productos", error})
             console.error("Error al obtener los productos:", error)
+            res.status(500).json({message:"Error al obtener los productos"})
         }
     }
 
@@ -126,8 +135,8 @@ export class ProductoController{
                 data_ui: this.toUiProduct(producto),
             })
         }catch(error){
-            res.status(500).json({message:"Error al obtener el producto", error})
             console.error("Error al obtener el producto:", error)
+            res.status(500).json({message:"Error al obtener el producto"})
         }
     }
 
@@ -148,20 +157,26 @@ export class ProductoController{
             const{id} = req.params
             const normalized = this.normalizeProductInput(req.body);
             const productoUpdates:Partial<ProductosDto> = {}
-            if (normalized.nombre) productoUpdates.nombre = normalized.nombre
-            if (normalized.descripcion !== undefined) productoUpdates.descripcion = normalized.descripcion
-            if (normalized.imagen_url !== undefined) productoUpdates.imagen_url = normalized.imagen_url
-            if (normalized.categoria_id) productoUpdates.categoria_id = normalized.categoria_id
-            if (Number.isFinite(normalized.price) && normalized.price >= 0) productoUpdates.price = normalized.price
-            if (normalized.talla) productoUpdates.talla = normalized.talla
+            if (req.body.nombre !== undefined || req.body.name !== undefined) productoUpdates.nombre = normalized.nombre
+            if (req.body.descripcion !== undefined || req.body.description !== undefined) productoUpdates.descripcion = normalized.descripcion
+            if (req.body.imagen_url !== undefined || req.body.image_url !== undefined || req.body.imagen !== undefined || req.body.image !== undefined) productoUpdates.imagen_url = normalized.imagen_url
+            if (req.body.categoria_id !== undefined || req.body.category_id !== undefined) productoUpdates.categoria_id = normalized.categoria_id
+            if (req.body.price !== undefined || req.body.precio !== undefined) {
+                if (!Number.isFinite(normalized.price) || normalized.price < 0) {
+                    return res.status(400).json({message: "El price debe ser un numero valido"});
+                }
+                productoUpdates.price = normalized.price
+            }
+            if (req.body.talla !== undefined || req.body.size !== undefined) productoUpdates.talla = normalized.talla
+            if (req.body.genero !== undefined || req.body.gender !== undefined) productoUpdates.genero = normalized.genero
             const result = await ProductosRepository.actualizarProductoPorId(Number(id),productoUpdates)
             if(!result) {
                 return res.status(404).json({message:"Producto no encontrado"})
             }
             return res.status(200).json({message:"Producto actualizado correctamente", data:result})
         }catch(error){
-            res.status(500).json({message:"Error al actualizar el producto", error})
             console.error("Error al actualizar el producto:", error)
+            res.status(500).json({message:"Error al actualizar el producto"})
         }
     }
 
@@ -185,8 +200,8 @@ export class ProductoController{
             }
             return res.status(200).json({message:"Producto eliminado correctamente", data:result})
         }catch(error){
-            res.status(500).json({message:"Error al eliminar el producto", error})
             console.error("Error al eliminar el producto:", error)
+            res.status(500).json({message:"Error al eliminar el producto"})
         }
     }
 
@@ -226,8 +241,28 @@ export class ProductoController{
                     data_ui: productos.map((p: any) => this.toUiProduct(p)),
                 })
         }catch(error){
-            res.status(500).json({message:"Error al obtener los productos con detalles", error})
             console.error("Error al obtener los productos con detalles:", error)
+            res.status(500).json({message:"Error al obtener los productos con detalles"})
+        }
+    }
+
+    static async getProductsByGender(req:Request,res:Response){
+        try{
+            const { genero } = req.params
+            if(!genero){
+                return res.status(400).json({message:"Falta parametro: genero es requerido"})
+            }
+            const productos = await ProductosRepository.obtenerProductos(genero)
+            return res.status(200).json({
+                message: productos.length > 0
+                    ? "Productos por genero obtenidos correctamente"
+                    : "No se encontraron productos para el genero solicitado",
+                data: productos,
+                data_ui: productos.map((p: any) => this.toUiProduct(p)),
+            })
+        }catch(error){
+            console.error("Error al obtener productos por genero:", error)
+            res.status(500).json({message:"Error al obtener productos por genero"})
         }
     }
 }

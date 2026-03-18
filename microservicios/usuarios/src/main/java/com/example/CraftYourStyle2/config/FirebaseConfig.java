@@ -9,15 +9,20 @@ import org.springframework.context.annotation.Configuration;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 /**
- * Configuración de Firebase Admin SDK
- * 
- * Inicializa Firebase al arrancar la aplicación usando
+ * Configuracion de Firebase Admin SDK
+ *
+ * Inicializa Firebase al arrancar la aplicacion usando
  * el archivo serviceAccountKey.json descargado desde Firebase Console.
  */
 @Configuration
 public class FirebaseConfig {
+
+    @Value("${firebase.enabled:true}")
+    private boolean firebaseEnabled;
 
     @Value("${firebase.credentials.path}")
     private String firebaseCredentialsPath;
@@ -25,8 +30,24 @@ public class FirebaseConfig {
     @PostConstruct
     public void initializeFirebase() {
         try {
+            if (!firebaseEnabled) {
+                System.out.println("Firebase deshabilitado por configuracion. Se omite la inicializacion.");
+                return;
+            }
+
+            if (firebaseCredentialsPath == null || firebaseCredentialsPath.isBlank()) {
+                System.out.println("Ruta de credenciales de Firebase vacia. Se omite la inicializacion.");
+                return;
+            }
+
+            Path credentialsPath = Path.of(firebaseCredentialsPath);
+            if (!Files.exists(credentialsPath)) {
+                System.out.println("No se encontro el archivo de credenciales de Firebase en " + credentialsPath + ". Se omite la inicializacion.");
+                return;
+            }
+
             if (FirebaseApp.getApps().isEmpty()) {
-                FileInputStream serviceAccount = new FileInputStream(firebaseCredentialsPath);
+                FileInputStream serviceAccount = new FileInputStream(credentialsPath.toFile());
 
                 FirebaseOptions options = FirebaseOptions.builder()
                         .setCredentials(GoogleCredentials.fromStream(serviceAccount))
@@ -37,7 +58,7 @@ public class FirebaseConfig {
             }
         } catch (IOException e) {
             System.err.println("Error al inicializar Firebase: " + e.getMessage());
-            throw new RuntimeException("No se pudo inicializar Firebase", e);
+            System.err.println("Se continuara sin Firebase.");
         }
     }
 }

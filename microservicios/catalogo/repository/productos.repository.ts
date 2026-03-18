@@ -25,10 +25,10 @@ export class ProductosRepository{
      * Nota: Los campos created_at y updated_at se generan automáticamente en la BD
      */
     static async crearProducto(producto: ProductosDto){
-        const {nombre, descripcion, imagen_url, categoria_id, price, talla} = producto;
+        const {nombre, descripcion, imagen_url, categoria_id, price, talla, genero} = producto;
         const [result] = await pool.query(
-            "INSERT INTO productos (nombre, image_url, descripcion, category_id, price, talla) VALUES (?, ?, ?, ?, ?, ?)",
-            [nombre, imagen_url ?? null, descripcion ?? null, categoria_id, price, talla]
+            "INSERT INTO productos (nombre, image_url, descripcion, category_id, price, talla, genero) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [nombre, imagen_url ?? null, descripcion ?? null, categoria_id, price, talla, genero]
         );
         return result;
     }
@@ -49,10 +49,14 @@ export class ProductosRepository{
      * Nota: Este método NO incluye información de categorías, tiendas ni variantes.
      * Para obtener información completa, usar obtenerProductosConDetalles()
      */
-    static async obtenerProductos(){
-        const [rows]:any = await pool.query(
-            "SELECT * FROM productos"
-        )
+    static async obtenerProductos(genero?: string){
+        const hasGenero = typeof genero === "string" && genero.trim().length > 0;
+        const [rows]:any = hasGenero
+            ? await pool.query(
+                "SELECT * FROM productos WHERE LOWER(genero) = LOWER(?)",
+                [genero]
+            )
+            : await pool.query("SELECT * FROM productos");
         return rows
     }
 
@@ -95,6 +99,8 @@ export class ProductosRepository{
             price: "price",
             precio: "price",
             talla: "talla",
+            genero: "genero",
+            gender: "genero",
         };
         // Construye dinámicamente la consulta SQL según los campos recibidos
         for (const [key, value] of Object.entries(producto)) {
@@ -155,6 +161,7 @@ export class ProductosRepository{
                 p.category_id AS categoria_id,
                 p.price AS precio,
                 p.talla,
+                p.genero,
                 c.name AS categoria,
                 vp.stock AS existencias,
                 p.created_at,

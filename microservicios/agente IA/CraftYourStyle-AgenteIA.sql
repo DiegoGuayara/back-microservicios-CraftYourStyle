@@ -6,8 +6,25 @@ create table imagenes_ia(
 	id INT AUTO_INCREMENT PRIMARY KEY,
     image_url VARCHAR(255) NOT NULL,
     variant_id int null,
-    tipo ENUM('producto', 'usuario_diseño', 'logo') DEFAULT 'producto'
+    id_user INT NULL,
+    tipo ENUM('producto', 'usuario_diseño', 'logo') DEFAULT 'producto',
+    prompt TEXT NULL,
+    garment_type VARCHAR(50) NULL,
+    estado ENUM('pendiente','aprobada','rechazada') NOT NULL DEFAULT 'pendiente',
+    precio DECIMAL(10,2) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+
+ALTER TABLE imagenes_ia
+  MODIFY COLUMN tipo ENUM('producto','usuario_diseño','logo')
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_general_ci;
+
+UPDATE imagenes_ia
+SET tipo = 'usuario_diseño'
+WHERE tipo = 'usuario_dise?o';
 
 CREATE TABLE sesiones_ia (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -35,6 +52,14 @@ CREATE TABLE fotos_usuario (
     foto_url VARCHAR(255) NOT NULL,
     es_principal BOOLEAN DEFAULT FALSE,
     fecha_subida TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE personalizacion (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_user INT NOT NULL,
+    image_url VARCHAR(255) NOT NULL,
+    prompt TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Resultados de virtual try-on

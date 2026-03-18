@@ -14,11 +14,13 @@ class MensajeResponse(BaseModel):
     id: int
     tipo: str
     contenido: str
-    metadata: Optional[dict] = None
+    metadata: Optional[dict] = Field(default=None, alias="datos_extra")
     timestamp: datetime
     
     class Config:
         from_attributes = True
+        populate_by_name = True
+        allow_population_by_field_name = True
 
 
 class SesionCreate(BaseModel):

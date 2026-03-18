@@ -43,6 +43,10 @@ async def _design_prompt_call(user_request: str, garment_type: str = "camiseta")
     SYSTEM:
     Eres un experto en describir disenos para prendas de vestir.
     Genera descripciones detalladas en ingles para modelos de generacion de imagenes (Stable Diffusion).
+    Respeta estrictamente lo pedido por el usuario y NO inventes elementos.
+    Si el usuario pide "liso" o "sin estampado", incluye explicitamente "solid color, no pattern, no stripes, no print".
+    Si falta un detalle, no lo inventes; usa descripciones neutrales.
+    Devuelve solo el prompt final en ingles, sin explicaciones ni texto extra.
 
     La descripcion debe incluir:
     - Tipo de prenda
@@ -284,3 +288,5 @@ class FashionOrchestrator:
 
 # Instancia global del orquestador
 orchestrator = FashionOrchestrator()
+
+

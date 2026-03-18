@@ -15,3 +15,8 @@ export interface TransaccionDto {
   banco: string;
   id_user: number
 }
+
+export interface BancoDto {
+  id?: number;
+  nombre: string;
+}

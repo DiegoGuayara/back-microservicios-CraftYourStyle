@@ -6,6 +6,7 @@ const productoController = ProductoController;
 
 router.post('/crearProducto', ProductoController.createProduct.bind(productoController));
 router.get('/obtenerProductos', ProductoController.getProducts.bind(productoController));
+router.get('/obtenerProductosPorGenero/:genero', ProductoController.getProductsByGender.bind(productoController));
 router.get('/obtenerProducto/:id', ProductoController.getProductById.bind(productoController));
 router.get('/obtenerProductosConDetalles/:categoria_id', ProductoController.getProductsWithDetails.bind(productoController));
 router.patch('/actualizarProducto/:id', ProductoController.updateProductById.bind(productoController));
