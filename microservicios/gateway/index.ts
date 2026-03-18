@@ -11,14 +11,14 @@
  * - Configuración mediante variables de entorno
  */
 
-import express from "express";
+import express, { Request, Response } from "express";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import dotenv from "dotenv";
 import cors from "cors";
-import { IncomingMessage } from "http";
+import { Buffer } from "node:buffer";
 
 // Extend IncomingMessage to include body property added by express.json()
-declare module "http" {
+declare module "node:http" {
   interface IncomingMessage {
     body?: any;
   }
@@ -29,8 +29,49 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 1010;
+const DEFAULT_CORS_ORIGINS = ["http://localhost:5173"];
+const DOCKER_FALLBACK_HOSTS = [
+  "http://transacciones:10101",
+  "http://agente-ia:10105",
+  "http://catalogo:10103",
+  "http://notificaciones:10104",
+  "http://usuarios:8080",
+  "http://admin:3000",
+];
 
-app.use(cors()); // Habilitar CORS para permitir peticiones desde el frontend
+type RouteConfig = {
+  target: string;
+  pathRewrite: Record<string, string>;
+  envVar?: string;
+  isFallback?: boolean;
+};
+
+function parseCorsOrigins(value?: string) {
+  const origins = value
+    ?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return origins?.length ? origins : DEFAULT_CORS_ORIGINS;
+}
+
+function resolveTarget(envVar: string, fallback: string) {
+  const target = process.env[envVar]?.trim();
+
+  return {
+    target: target || fallback,
+    isFallback: !target,
+  };
+}
+
+const corsOrigins = parseCorsOrigins(process.env.CORS_ORIGINS);
+
+app.use(
+  cors({
+    origin: corsOrigins,
+    credentials: true,
+  })
+); // Habilitar CORS para permitir peticiones desde el frontend
 app.use(express.json()); // Parsear JSON en el cuerpo de las peticiones
 
 /**
@@ -42,36 +83,84 @@ app.use(express.json()); // Parsear JSON en el cuerpo de las peticiones
  * pathRewrite: Elimina el prefijo /api/{servicio} antes de enviar al microservicio
  * Ejemplo: /api/transacciones/crearCuenta -> http://transacciones:10101/crearCuenta
  */
-const routes = {
+const transaccionesTarget = resolveTarget(
+  "TRANSACCIONES_URL",
+  "http://transacciones:10101"
+);
+const agenteIaTarget = resolveTarget("AGENTE_IA_URL", "http://agente-ia:10105");
+const catalogoTarget = resolveTarget("CATALOGO_URL", "http://catalogo:10103");
+const notificacionesTarget = resolveTarget(
+  "NOTIFICACIONES_URL",
+  "http://notificaciones:10104"
+);
+const usuariosTarget = resolveTarget("USUARIOS_URL", "http://usuarios:8080");
+const adminTarget = resolveTarget("ADMIN_URL", "http://admin:3000");
+
+const routes: Record<string, RouteConfig> = {
   "/api/transacciones": {
-    target: process.env.TRANSACCIONES_URL || "http://transacciones:10101",
+    target: transaccionesTarget.target,
     pathRewrite: { "^/api/transacciones": "" }, // Remueve /api/transacciones del path
+    envVar: "TRANSACCIONES_URL",
+    isFallback: transaccionesTarget.isFallback,
   },
   "/api/agente-ia": {
-    target: process.env.AGENTE_IA_URL || "http://agente-ia:10105",
+    target: agenteIaTarget.target,
     pathRewrite: { "^/api/agente-ia": "" }, // Remueve /api/agente-ia del path
+    envVar: "AGENTE_IA_URL",
+    isFallback: agenteIaTarget.isFallback,
   },
   "/api/generate": {
-    target: process.env.AGENTE_IA_URL || "http://agente-ia:10105",
+    target: agenteIaTarget.target,
     pathRewrite: { "^/api/generate": "/generate" }, // Compatibilidad legacy nanoService
+    envVar: "AGENTE_IA_URL",
+    isFallback: agenteIaTarget.isFallback,
   },
   "/api/catalogo": {
-    target: process.env.CATALOGO_URL || "http://catalogo:10103",
+    target: catalogoTarget.target,
     pathRewrite: { "^/api/catalogo": "" }, // Remueve /api/catalogo del path
+    envVar: "CATALOGO_URL",
+    isFallback: catalogoTarget.isFallback,
   },
   "/api/notificaciones": {
-    target: process.env.NOTIFICACIONES_URL || "http://notificaciones:10104",
+    target: notificacionesTarget.target,
     pathRewrite: { "^/api/notificaciones": "" }, // Remueve /api/notificaciones del path
+    envVar: "NOTIFICACIONES_URL",
+    isFallback: notificacionesTarget.isFallback,
   },
   "/api/usuarios": {
-    target: process.env.USUARIOS_URL || "http://usuarios:8080",
+    target: usuariosTarget.target,
     pathRewrite: { "^/api/usuarios": "" }, // Remueve /api/usuarios del path
+    envVar: "USUARIOS_URL",
+    isFallback: usuariosTarget.isFallback,
   },
   "/api/admin": {
-    target: process.env.ADMIN_URL || "http://admin:3000",
+    target: adminTarget.target,
     pathRewrite: { "^/api/admin": "/admin" }, // /api/admin/x -> /admin/x
+    envVar: "ADMIN_URL",
+    isFallback: adminTarget.isFallback,
   },
 };
+
+function logDeploymentWarnings() {
+  const fallbackRoutes = Object.entries(routes).filter(([, config]) => config.isFallback);
+
+  if (fallbackRoutes.length > 0) {
+    console.warn("Advertencia: hay rutas usando targets por defecto del entorno local/Docker.");
+    fallbackRoutes.forEach(([path, config]) => {
+      console.warn(`  ${path} usa fallback. Define ${config.envVar} para despliegues.`);
+    });
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    fallbackRoutes.forEach(([path, config]) => {
+      if (DOCKER_FALLBACK_HOSTS.includes(config.target)) {
+        console.warn(
+          `[PRODUCTION] ${path} apunta a ${config.target}. En Render debes configurar ${config.envVar} con la URL real del microservicio.`
+        );
+      }
+    });
+  }
+}
 
 /**
  * Configuración del middleware de proxy para cada ruta
@@ -103,7 +192,7 @@ Object.entries(routes).forEach(([path, config]) => {
         }
       },
       // Hook que se ejecuta cuando hay un error en la conexión
-      error: (err, req, res) => {
+      error: (err: Error, req, res) => {
         console.error(`Error en proxy ${path}:`, err.message);
         // Solo enviar respuesta si los headers no han sido enviados
         if ("headersSent" in res && !res.headersSent) {
@@ -125,7 +214,7 @@ Object.entries(routes).forEach(([path, config]) => {
  * 
  * Endpoint simple para verificar que el gateway está funcionando.
  */
-app.get("/", (req, res) => {
+app.get("/", (_req: Request, res: Response) => {
   res.send("Gateway API is running");
 });
 
@@ -138,8 +227,10 @@ app.get("/", (req, res) => {
  */
 app.listen(PORT, () => {
   console.log(`Gateway API is running on port ${PORT}`);
+  console.log(`CORS origins: ${corsOrigins.join(", ")}`);
   console.log("Rutas configuradas:");
   Object.entries(routes).forEach(([path, config]) => {
     console.log(`  ${path} -> ${config.target}`);
   });
+  logDeploymentWarnings();
 });
