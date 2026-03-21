@@ -22,7 +22,17 @@ export class VariantProductosRepository {
 
   /** Obtiene todas las variantes de todos los productos */
   static async obtenerVariantesProductos() {
-    const [rows]: any = await pool.query("SELECT * FROM variantes_productos");
+    const [rows]: any = await pool.query(
+      "SELECT * FROM variantes_productos ORDER BY producto_id ASC, id ASC"
+    );
+    return rows;
+  }
+
+  static async obtenerVariantesPorProductoId(productoId: number) {
+    const [rows]: any = await pool.query(
+      "SELECT * FROM variantes_productos WHERE producto_id = ? ORDER BY id ASC",
+      [productoId]
+    );
     return rows;
   }
 
@@ -64,6 +74,21 @@ export class VariantProductosRepository {
     values.push(id);
     const [result] = await pool.query(sql, values);
     return result;
+  }
+
+  static async descontarStockPorId(id: number, cantidad: number) {
+    const [result]: any = await pool.query(
+      `UPDATE variantes_productos
+       SET stock = stock - ?
+       WHERE id = ? AND stock >= ?`,
+      [cantidad, id, cantidad]
+    );
+
+    if (result.affectedRows === 0) {
+      return null;
+    }
+
+    return this.obtenerVariantProductoPorId(id);
   }
 
   /** Elimina una variante por su ID */

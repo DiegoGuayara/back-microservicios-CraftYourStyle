@@ -29,7 +29,7 @@ export class ProductoController{
             name: producto.nombre ?? producto.producto ?? "",
             category: producto.categoria ?? producto.categoria_id ?? producto.category_id ?? null,
             price: Number(producto.price ?? producto.precio ?? 0),
-            stock: Number(producto.existencias ?? producto.stock ?? 0),
+            stock: Number(producto.stock_total ?? producto.existencias ?? producto.stock ?? 0),
             image: producto.imagen_url ?? producto.image_url ?? producto.image ?? "",
             description: producto.descripcion ?? null,
             size: producto.talla ?? null,

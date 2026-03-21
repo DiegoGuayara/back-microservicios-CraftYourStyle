@@ -28,6 +28,18 @@ CREATE TABLE IF NOT EXISTS verificacionPrenda (
     FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS variantes_productos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    producto_id INT NOT NULL,
+    size VARCHAR(10) NOT NULL,
+    color VARCHAR(50) NOT NULL,
+    stock INT NOT NULL DEFAULT 0,
+    price DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE
+);
+
 -- Migracion para bases existentes: agrega la columna genero si aun no existe.
 SET @column_exists := (
     SELECT COUNT(*)

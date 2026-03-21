@@ -53,10 +53,23 @@ export class ProductosRepository{
         const hasGenero = typeof genero === "string" && genero.trim().length > 0;
         const [rows]:any = hasGenero
             ? await pool.query(
-                "SELECT * FROM productos WHERE LOWER(genero) = LOWER(?)",
+                `SELECT
+                    p.*,
+                    COALESCE(SUM(vp.stock), 0) AS stock_total
+                FROM productos p
+                LEFT JOIN variantes_productos vp ON p.id = vp.producto_id
+                WHERE LOWER(p.genero) = LOWER(?)
+                GROUP BY p.id`,
                 [genero]
             )
-            : await pool.query("SELECT * FROM productos");
+            : await pool.query(
+                `SELECT
+                    p.*,
+                    COALESCE(SUM(vp.stock), 0) AS stock_total
+                FROM productos p
+                LEFT JOIN variantes_productos vp ON p.id = vp.producto_id
+                GROUP BY p.id`
+            );
         return rows
     }
 
@@ -70,7 +83,13 @@ export class ProductosRepository{
      */
     static async obtenerProductoPorId(id:number){
         const [rows]:any = await pool.query(
-            "SELECT * FROM productos WHERE id = ?",
+            `SELECT
+                p.*,
+                COALESCE(SUM(vp.stock), 0) AS stock_total
+            FROM productos p
+            LEFT JOIN variantes_productos vp ON p.id = vp.producto_id
+            WHERE p.id = ?
+            GROUP BY p.id`,
             [id]    
         )    
         return rows.length > 0 ? rows[0] : null
@@ -163,13 +182,26 @@ export class ProductosRepository{
                 p.talla,
                 p.genero,
                 c.name AS categoria,
-                vp.stock AS existencias,
+                COALESCE(SUM(vp.stock), 0) AS existencias,
+                COUNT(vp.id) AS total_variantes,
                 p.created_at,
                 p.updated_at
             FROM productos p
             JOIN categoria c ON p.category_id = c.id
-            LEFT JOIN verificacionPrenda vp ON p.id = vp.producto_id
-            WHERE p.category_id = ?`,
+            LEFT JOIN variantes_productos vp ON p.id = vp.producto_id
+            WHERE p.category_id = ?
+            GROUP BY
+                p.id,
+                p.nombre,
+                p.descripcion,
+                p.image_url,
+                p.category_id,
+                p.price,
+                p.talla,
+                p.genero,
+                c.name,
+                p.created_at,
+                p.updated_at`,
             [categoria_id]
         );
         return rows;
