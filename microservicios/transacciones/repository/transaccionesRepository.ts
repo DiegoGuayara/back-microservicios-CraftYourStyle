@@ -5,7 +5,12 @@
  * Permite a los usuarios registrar sus métodos de pago para realizar compras.
  */
 
-import type { BancoDto, TransaccionDto } from "../DTO/transaccionesDto.js";
+import type {
+  BancoDto,
+  EstadoPago,
+  PagoEpaycoRecord,
+  TransaccionDto,
+} from "../DTO/transaccionesDto.js";
 import pool from "../config/db-config.js";
 
 export class TransaccionesRepository {
@@ -152,6 +157,97 @@ export class TransaccionesRepository {
 
     if (resultDb.affectedRows === 0) {
       return;
+    }
+
+    return resultDb;
+  }
+
+  static async createEpaycoPayment(payment: PagoEpaycoRecord) {
+    const [result] = await pool.query(
+      `INSERT INTO pagos_epayco (
+        order_id,
+        user_id,
+        provider,
+        provider_reference,
+        epayco_ref,
+        transaction_id,
+        amount,
+        currency,
+        description,
+        status,
+        raw_response
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        payment.order_id,
+        payment.user_id,
+        payment.provider,
+        payment.provider_reference,
+        payment.epayco_ref ?? null,
+        payment.transaction_id ?? null,
+        payment.amount,
+        payment.currency,
+        payment.description,
+        payment.status,
+        payment.raw_response ?? null,
+      ]
+    );
+
+    return result;
+  }
+
+  static async findPaymentByProviderReference(providerReference: string) {
+    const [rows]: any = await pool.query(
+      "SELECT * FROM pagos_epayco WHERE provider_reference = ?",
+      [providerReference]
+    );
+
+    return rows[0];
+  }
+
+  static async findPaymentByEpaycoRef(epaycoRef: string) {
+    const [rows]: any = await pool.query(
+      "SELECT * FROM pagos_epayco WHERE epayco_ref = ?",
+      [epaycoRef]
+    );
+
+    return rows[0];
+  }
+
+  static async findPaymentsByOrderId(orderId: string) {
+    const [rows]: any = await pool.query(
+      "SELECT * FROM pagos_epayco WHERE order_id = ? ORDER BY id DESC",
+      [orderId]
+    );
+
+    return rows;
+  }
+
+  static async updateEpaycoPaymentStatus(params: {
+    providerReference: string;
+    status: EstadoPago;
+    epaycoRef?: string | null;
+    transactionId?: string | null;
+    rawResponse?: string | null;
+  }) {
+    const [resultDb]: any = await pool.query(
+      `UPDATE pagos_epayco
+       SET status = ?,
+           epayco_ref = COALESCE(?, epayco_ref),
+           transaction_id = COALESCE(?, transaction_id),
+           raw_response = COALESCE(?, raw_response),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE provider_reference = ?`,
+      [
+        params.status,
+        params.epaycoRef ?? null,
+        params.transactionId ?? null,
+        params.rawResponse ?? null,
+        params.providerReference,
+      ]
+    );
+
+    if (resultDb.affectedRows === 0) {
+      return null;
     }
 
     return resultDb;

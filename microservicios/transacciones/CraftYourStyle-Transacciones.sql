@@ -17,6 +17,23 @@ create table if not exists transacciones(
   id_user INT
 );
 
+create table if not exists pagos_epayco(
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id varchar(120) not null,
+  user_id INT not null,
+  provider enum("epayco","mock") not null default "epayco",
+  provider_reference varchar(160) not null unique,
+  epayco_ref varchar(160) null,
+  transaction_id varchar(160) null,
+  amount decimal(12,2) not null,
+  currency varchar(10) not null default "COP",
+  description varchar(255) not null,
+  status enum("PENDIENTE","APROBADA","RECHAZADA","CANCELADA","EXPIRADA","ERROR") not null default "PENDIENTE",
+  raw_response longtext null,
+  created_at timestamp default current_timestamp,
+  updated_at timestamp default current_timestamp on update current_timestamp
+);
+
 insert ignore into bancos (nombre) values
   ("Bancolombia"),
   ("Banco de Bogota"),

@@ -92,8 +92,8 @@ services:
     build:
       context: ./microservicios/transacciones
       dockerfile: Dockerfile
-    expose:
-      - "10101"
+    ports:
+      - "10101:10101"
     env_file:
       - ./microservicios/transacciones/.env
     environment:
@@ -112,8 +112,8 @@ services:
     build:
       context: ./microservicios/catalogo
       dockerfile: Dockerfile
-    expose:
-      - "10103"
+    ports:
+      - "10103:10103"
     env_file:
       - ./microservicios/catalogo/.env
     networks:

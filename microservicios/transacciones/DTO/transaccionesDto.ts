@@ -20,3 +20,60 @@ export interface BancoDto {
   id?: number;
   nombre: string;
 }
+
+export type EstadoPago =
+  | "PENDIENTE"
+  | "APROBADA"
+  | "RECHAZADA"
+  | "CANCELADA"
+  | "EXPIRADA"
+  | "ERROR";
+
+export interface PagoCheckoutDto {
+  orderId: string;
+  userId: number;
+  amount: number;
+  currency?: string;
+  description: string;
+  tax?: number;
+  taxBase?: number;
+  customer?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    docType?: string;
+    docNumber?: string;
+  };
+}
+
+export interface PagoEpaycoRecord {
+  id?: number;
+  order_id: string;
+  user_id: number;
+  provider: "epayco" | "mock";
+  provider_reference: string;
+  epayco_ref?: string | null;
+  transaction_id?: string | null;
+  amount: number;
+  currency: string;
+  description: string;
+  status: EstadoPago;
+  raw_response?: string | null;
+}
+
+export interface EpaycoWebhookPayload {
+  ref_payco?: string;
+  x_ref_payco?: string;
+  x_transaction_id?: string;
+  x_amount?: string;
+  x_currency_code?: string;
+  x_signature?: string;
+  x_response?: string;
+  x_response_reason_text?: string;
+  x_transaction_state?: string;
+  x_franchise?: string;
+  x_extra1?: string;
+  x_extra2?: string;
+  x_extra3?: string;
+  [key: string]: unknown;
+}

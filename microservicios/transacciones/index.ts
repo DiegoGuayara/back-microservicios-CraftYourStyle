@@ -24,6 +24,7 @@ const PORT = process.env.PORT || 10101
 
 // Middleware para parsear JSON en las peticiones
 app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
 // Rutas del microservicio de transacciones
 app.use("/transacciones", router)

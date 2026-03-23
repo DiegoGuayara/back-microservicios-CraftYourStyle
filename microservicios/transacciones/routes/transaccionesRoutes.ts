@@ -24,6 +24,26 @@ router.post(
   "/crearCuenta",
   TransaccionesController.crearTransaccion.bind(transaccionesController)
 );
+router.post(
+  "/checkout",
+  TransaccionesController.crearCheckout.bind(transaccionesController)
+);
+router.post(
+  "/webhook/epayco",
+  TransaccionesController.webhookEpayco.bind(transaccionesController)
+);
+router.get(
+  "/respuesta/epayco",
+  TransaccionesController.respuestaEpayco.bind(transaccionesController)
+);
+router.get(
+  "/pagos/orden/:orderId",
+  TransaccionesController.obtenerPagosPorOrden.bind(transaccionesController)
+);
+router.get(
+  "/pagos/:reference",
+  TransaccionesController.obtenerPago.bind(transaccionesController)
+);
 router.get(
   "/obtenerCuentas/:id_user",
   TransaccionesController.obtenerCuentas.bind(transaccionesController)
