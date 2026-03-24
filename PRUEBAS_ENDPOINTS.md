@@ -505,6 +505,112 @@ Authorization: Bearer <JWT_TOKEN_ADMIN>
 
 ---
 
+## 5.5 Pagos ePayco
+
+> El micro de transacciones tiene compatibilidad legacy para rutas sin el segundo `/transacciones`, pero para pruebas usa estas rutas del gateway con doble prefijo. El servicio esta configurado en modo pruebas (`EPAYCO_TEST=true`).
+
+### 5.5.1 Crear checkout
+- **Metodo:** `POST`
+- **URL:** `http://localhost:1010/api/transacciones/transacciones/checkout`
+- **Body:**
+```json
+{
+  "orderId": "ORD-EPAYCO-001",
+  "userId": 1,
+  "amount": 150000,
+  "description": "Pago pedido CraftYourStyle",
+  "currency": "COP",
+  "tax": 0,
+  "taxBase": 150000,
+  "customer": {
+    "name": "Diana Guayara",
+    "email": "diana@email.com",
+    "phone": "3001234567",
+    "docType": "CC",
+    "docNumber": "1234567890"
+  }
+}
+```
+- **Respuesta esperada:** `201 Created`
+- **Que validar en la respuesta:**
+  - `data.payment.provider_reference` -> guárdalo; sera la referencia interna para consultar el pago.
+  - `data.payment.status` -> inicialmente debe quedar en `PENDIENTE`.
+  - `data.checkoutConfig` -> trae la configuracion que el frontend necesita para abrir el checkout de ePayco.
+
+---
+
+### 5.5.2 Consultar pago por referencia interna
+- **Metodo:** `GET`
+- **URL:** `http://localhost:1010/api/transacciones/transacciones/pagos/CYS-ORD-EPAYCO-001-<timestamp>-<suffix>`
+- **Respuesta esperada:** `200 OK`
+- **Nota:** usa exactamente el valor de `data.payment.provider_reference` que devolvio el checkout.
+
+---
+
+### 5.5.3 Consultar pagos por orden
+- **Metodo:** `GET`
+- **URL:** `http://localhost:1010/api/transacciones/transacciones/pagos/orden/ORD-EPAYCO-001`
+- **Respuesta esperada:** `200 OK` — Lista de pagos asociados a esa orden.
+
+---
+
+### 5.5.4 Simular la redireccion de respuesta de ePayco
+- **Metodo:** `GET`
+- **URL:** `http://localhost:1010/api/transacciones/transacciones/respuesta/epayco?x_extra3=<PROVIDER_REFERENCE>&x_ref_payco=TEST-REF-001`
+- **Respuesta esperada:** `200 OK`
+- **Que validar en la respuesta:**
+  - `message` debe ser `"Respuesta ePayco recibida"`.
+  - `data.provider_reference` debe coincidir con el pago creado.
+  - `epayco.ref_payco` debe reflejar el valor enviado.
+
+---
+
+### 5.5.5 Simular webhook de confirmacion de ePayco
+- **Metodo:** `POST`
+- **URL:** `http://localhost:1010/api/transacciones/transacciones/webhook/epayco`
+- **Body de prueba aprobado:**
+```json
+{
+  "x_ref_payco": "TEST-REF-001",
+  "x_transaction_id": "TX-001",
+  "x_amount": "150000",
+  "x_currency_code": "COP",
+  "x_signature": "FIRMA_CALCULADA_POR_EPAYCO",
+  "x_response": "Aceptada",
+  "x_transaction_state": "Aceptada",
+  "x_extra1": "ORD-EPAYCO-001",
+  "x_extra2": "1",
+  "x_extra3": "<PROVIDER_REFERENCE>"
+}
+```
+- **Respuesta esperada:** `200 OK`
+- **Que validar en la respuesta:**
+  - `data.status` debe pasar a `APROBADA` si envias `x_response: "Aceptada"`.
+  - `data.epayco_ref` debe quedar con `TEST-REF-001`.
+  - `data.transaction_id` debe quedar con `TX-001`.
+- **Estados soportados por el mapeo actual:**
+  - `Aceptada` -> `APROBADA`
+  - `Rechazada` -> `RECHAZADA`
+  - `Pendiente` -> `PENDIENTE`
+  - `Fallida` -> `ERROR`
+  - `Cancelada` -> `CANCELADA`
+  - `Expirada` -> `EXPIRADA`
+- **Importante:** si vas a simular este webhook manualmente, la firma `x_signature` debe ser valida. Se construye con:
+  - `sha256(x_cust_id_cliente ^ p_key ^ x_ref_payco ^ x_transaction_id ^ x_amount ^ x_currency_code)`
+  - Si la firma no coincide, el backend responde `400` con `"Firma ePayco invalida."`
+
+---
+
+### 5.5.6 Flujo rapido recomendado para probar
+1. Crea el checkout con `POST /api/transacciones/transacciones/checkout`.
+2. Copia el `data.payment.provider_reference` de la respuesta.
+3. Verifica el pago con `GET /api/transacciones/transacciones/pagos/{provider_reference}` y confirma que este en `PENDIENTE`.
+4. Simula la respuesta del checkout con `GET /api/transacciones/transacciones/respuesta/epayco?...`.
+5. Simula el webhook con `POST /api/transacciones/transacciones/webhook/epayco`.
+6. Consulta otra vez el pago o la orden para confirmar que el estado cambio a `APROBADA`.
+
+---
+
 ## 6. Notificaciones
 
 ### 6.1 Crear notificación (mensaje de texto)

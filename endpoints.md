@@ -119,6 +119,28 @@ Body:
   "banco": "Bancolombia",
   "id_user": 1
 }
+POST /api/transacciones/transacciones/checkout
+Body:
+{
+  "orderId": "ORD-EPAYCO-001",
+  "userId": 1,
+  "amount": 150000,
+  "description": "Pago pedido CraftYourStyle",
+  "currency": "COP",
+  "tax": 0,
+  "taxBase": 150000,
+  "customer": {
+    "name": "Diana Guayara",
+    "email": "diana@email.com",
+    "phone": "3001234567",
+    "docType": "CC",
+    "docNumber": "1234567890"
+  }
+}
+POST /api/transacciones/transacciones/webhook/epayco
+GET /api/transacciones/transacciones/respuesta/epayco?x_extra3=:provider_reference&x_ref_payco=:ref_payco
+GET /api/transacciones/transacciones/pagos/orden/:orderId
+GET /api/transacciones/transacciones/pagos/:reference
 GET /api/transacciones/transacciones/obtenerCuentas/:id_user
 PATCH /api/transacciones/transacciones/actualizarCuenta/:id_user/:id
 DELETE /api/transacciones/transacciones/eliminarCuenta/:id/:id_user
