@@ -6,6 +6,7 @@ export class ProductosDto {
   descripcion?: string;
   categoria_id: number = 0;
   price: number = 0;
+  stock: number = 0;
   talla: string = "";
   genero: string = "Unisex";
 

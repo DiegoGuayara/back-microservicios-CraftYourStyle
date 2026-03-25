@@ -25,10 +25,10 @@ export class ProductosRepository{
      * Nota: Los campos created_at y updated_at se generan automáticamente en la BD
      */
     static async crearProducto(producto: ProductosDto){
-        const {nombre, descripcion, imagen_url, categoria_id, price, talla, genero} = producto;
+        const {nombre, descripcion, imagen_url, categoria_id, price, stock, talla, genero} = producto;
         const [result] = await pool.query(
-            "INSERT INTO productos (nombre, image_url, descripcion, category_id, price, talla, genero) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [nombre, imagen_url ?? null, descripcion ?? null, categoria_id, price, talla, genero]
+            "INSERT INTO productos (nombre, image_url, descripcion, category_id, price, stock, talla, genero) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [nombre, imagen_url ?? null, descripcion ?? null, categoria_id, price, stock, talla, genero]
         );
         return result;
     }
@@ -53,22 +53,14 @@ export class ProductosRepository{
         const hasGenero = typeof genero === "string" && genero.trim().length > 0;
         const [rows]:any = hasGenero
             ? await pool.query(
-                `SELECT
-                    p.*,
-                    COALESCE(SUM(vp.stock), 0) AS stock_total
+                `SELECT p.*
                 FROM productos p
-                LEFT JOIN variantes_productos vp ON p.id = vp.producto_id
-                WHERE LOWER(p.genero) = LOWER(?)
-                GROUP BY p.id`,
+                WHERE LOWER(p.genero) = LOWER(?)`,
                 [genero]
             )
             : await pool.query(
-                `SELECT
-                    p.*,
-                    COALESCE(SUM(vp.stock), 0) AS stock_total
-                FROM productos p
-                LEFT JOIN variantes_productos vp ON p.id = vp.producto_id
-                GROUP BY p.id`
+                `SELECT p.*
+                FROM productos p`
             );
         return rows
     }
@@ -83,13 +75,9 @@ export class ProductosRepository{
      */
     static async obtenerProductoPorId(id:number){
         const [rows]:any = await pool.query(
-            `SELECT
-                p.*,
-                COALESCE(SUM(vp.stock), 0) AS stock_total
-            FROM productos p
-            LEFT JOIN variantes_productos vp ON p.id = vp.producto_id
-            WHERE p.id = ?
-            GROUP BY p.id`,
+            `SELECT *
+            FROM productos
+            WHERE id = ?`,
             [id]    
         )    
         return rows.length > 0 ? rows[0] : null
@@ -117,6 +105,8 @@ export class ProductosRepository{
             categoria_id: "category_id",
             price: "price",
             precio: "price",
+            stock: "stock",
+            existencias: "stock",
             talla: "talla",
             genero: "genero",
             gender: "genero",
@@ -179,29 +169,17 @@ export class ProductosRepository{
                 p.image_url AS imagen_url,
                 p.category_id AS categoria_id,
                 p.price AS precio,
+                p.stock AS stock,
                 p.talla,
                 p.genero,
                 c.name AS categoria,
-                COALESCE(SUM(vp.stock), 0) AS existencias,
-                COUNT(vp.id) AS total_variantes,
+                p.stock AS existencias,
                 p.created_at,
                 p.updated_at
             FROM productos p
             JOIN categoria c ON p.category_id = c.id
-            LEFT JOIN variantes_productos vp ON p.id = vp.producto_id
             WHERE p.category_id = ?
-            GROUP BY
-                p.id,
-                p.nombre,
-                p.descripcion,
-                p.image_url,
-                p.category_id,
-                p.price,
-                p.talla,
-                p.genero,
-                c.name,
-                p.created_at,
-                p.updated_at`,
+            ORDER BY p.id ASC`,
             [categoria_id]
         );
         return rows;

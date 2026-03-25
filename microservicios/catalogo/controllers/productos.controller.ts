@@ -18,6 +18,7 @@ export class ProductoController{
             imagen_url: payload.imagen_url ?? payload.image_url ?? payload.imagen ?? payload.image,
             categoria_id: Number(payload.categoria_id ?? payload.category_id ?? 0),
             price: Number(payload.price ?? payload.precio ?? 0),
+            stock: Number(payload.stock ?? payload.existencias ?? 0),
             talla: payload.talla ?? payload.size ?? "",
             genero: typeof genero === "string" ? genero : "Unisex",
         };
@@ -57,9 +58,9 @@ export class ProductoController{
     static async createProduct(req:Request,res:Response){
         try{
         const newProducto:ProductosDto = this.normalizeProductInput(req.body);
-        const { nombre, categoria_id, price, talla } = newProducto;
+        const { nombre, categoria_id, price, stock, talla } = newProducto;
         // Validar que todos los campos obligatorios estén presentes
-        if(!nombre || !categoria_id || !Number.isFinite(price) || !talla){
+        if(!nombre || !categoria_id || !Number.isFinite(price) || price < 0 || !Number.isFinite(stock) || stock < 0 || !talla){
             res.status(400).json({message:"Faltan datos obligatorios"})
             return
         }
@@ -166,6 +167,12 @@ export class ProductoController{
                     return res.status(400).json({message: "El price debe ser un numero valido"});
                 }
                 productoUpdates.price = normalized.price
+            }
+            if (req.body.stock !== undefined || req.body.existencias !== undefined) {
+                if (!Number.isFinite(normalized.stock) || normalized.stock < 0) {
+                    return res.status(400).json({message: "El stock debe ser un numero valido"});
+                }
+                productoUpdates.stock = normalized.stock
             }
             if (req.body.talla !== undefined || req.body.size !== undefined) productoUpdates.talla = normalized.talla
             if (req.body.genero !== undefined || req.body.gender !== undefined) productoUpdates.genero = normalized.genero
