@@ -7,6 +7,9 @@ class MensajeRequest(BaseModel):
     """Request para enviar un mensaje al agente"""
     mensaje: str = Field(..., description="Contenido del mensaje")
     imagenes: Optional[List[str]] = Field(None, description="URLs de imágenes adjuntas")
+    product_id: Optional[int] = Field(None, description="ID de la prenda del catálogo")
+    product_name: Optional[str] = Field(None, description="Nombre de la prenda seleccionada")
+    terms_accepted: bool = Field(False, description="Aceptación explícita de términos")
     
 
 class MensajeResponse(BaseModel):
@@ -26,12 +29,17 @@ class MensajeResponse(BaseModel):
 class SesionCreate(BaseModel):
     """Request para crear una sesión"""
     id_user: int
+    product_id: Optional[int] = None
+    product_name: Optional[str] = None
+    terms_accepted: bool = False
 
 
 class SesionResponse(BaseModel):
     """Response de una sesión"""
     id: int
     id_user: int
+    product_id: Optional[int] = None
+    product_name: Optional[str] = None
     fecha_inicio: datetime
     fecha_fin: Optional[datetime] = None
     estado: str

@@ -1,7 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models import SesionIA, MensajeIA, TipoMensaje, EstadoSesion
 from app.agents.orchestrator import orchestrator
-from app.services.design_generation_service import DesignGenerationService
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import re
@@ -34,6 +33,51 @@ class AgentService:
         ]):
             return "camiseta"
         return "camiseta"
+
+    @staticmethod
+    def _is_out_of_scope_request(user_message: str) -> bool:
+        message = user_message.lower()
+        forbidden_keywords = [
+            "outfit completo",
+            "outfit",
+            "combina",
+            "conjunto",
+            "prenda nueva",
+            "crea una prenda",
+            "generar prenda",
+            "diseña una camiseta desde cero",
+            "desde cero",
+            "nuevo modelo",
+            "nueva sudadera",
+            "nueva camisa",
+            "nueva camiseta",
+            "try on",
+            "try-on",
+            "probarme",
+            "subir una foto",
+            "foto mia",
+            "foto mía",
+        ]
+        return any(keyword in message for keyword in forbidden_keywords)
+
+    @staticmethod
+    def _build_product_context(
+        product_id: int,
+        product_name: Optional[str],
+        user_message: str,
+        history_context: str,
+    ) -> str:
+        garment_type = AgentService._detect_garment_type(product_name or user_message)
+        normalized_name = product_name or f"prenda #{product_id}"
+        return (
+            "Flujo cerrado de personalizacion de catalogo.\n"
+            f"Producto seleccionado: {normalized_name}.\n"
+            f"ID del producto: {product_id}.\n"
+            f"Tipo de prenda detectado: {garment_type}.\n"
+            "Acciones permitidas: cambiar color base, proponer logo, ubicar logo, ajustar tamano del logo.\n"
+            "Acciones NO permitidas: generar prendas nuevas, crear outfits completos, hacer try-on, pedir otra prenda distinta, editar fuera de la prenda actual.\n"
+            f"Historial reciente:\n{history_context}"
+        )
 
     @staticmethod
     async def create_session(db: Session, id_user: int) -> SesionIA:
@@ -100,7 +144,9 @@ class AgentService:
         db: Session,
         sesion_id: int,
         user_message: str,
-        imagenes: Optional[List[str]] = None
+        imagenes: Optional[List[str]] = None,
+        product_id: Optional[int] = None,
+        product_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Procesa un mensaje del usuario y genera respuesta del agente
@@ -114,6 +160,11 @@ class AgentService:
         Returns:
             Dict con respuesta de texto y URLs de imágenes detectadas/generadas
         """
+        if not product_id:
+            raise ValueError(
+                "Debes seleccionar una prenda del catálogo antes de usar el agente."
+            )
+
         # Guardar mensaje del usuario
         metadata = {"imagenes": imagenes} if imagenes else None
         await AgentService.save_message(
@@ -130,40 +181,26 @@ class AgentService:
             for msg in historial[:-1]  # Excluir el mensaje actual
         ]) if len(historial) > 1 else "Primera interacción"
 
-        # Detectar si el usuario quiere ver una imagen generada
-        should_generate = await DesignGenerationService.should_generate_image(user_message)
         imagenes_generadas: List[str] = []
 
         try:
-            if should_generate:
-                # Generar prompt optimizado y la imagen directamente (sin preguntas).
-                design_prompt_response = await orchestrator.generate_design_prompt(
-                    user_request=user_message,
-                    garment_type=AgentService._detect_garment_type(user_message)
-                )
-                design_prompt = orchestrator._extract_text(design_prompt_response)
-                design_prompt = DesignGenerationService.apply_plain_constraints(
-                    design_prompt, user_message
-                )
-                negative_prompt = DesignGenerationService.build_negative_prompt(user_message)
-
-                image_url = await DesignGenerationService.generate_design_image(
-                    prompt=design_prompt,
-                    negative_prompt=negative_prompt
-                )
-
+            if AgentService._is_out_of_scope_request(user_message):
                 respuesta_texto = (
-                    "Listo, generé tu diseño. Aquí está la imagen:\n"
-                    f"{image_url}"
+                    "En esta fase solo puedo ayudarte con la prenda del catálogo que seleccionaste. "
+                    "Ahora mismo únicamente gestiono cambios de color y logo sobre esa prenda. "
+                    "Todavía no puedo crear prendas nuevas, armar outfits completos ni hacer try-on desde el chat."
                 )
-                imagenes_generadas = [image_url]
             else:
-                # Flujo normal sin generación de imagen
                 response = await orchestrator.orchestrate(
                     user_message=user_message,
-                    context=context,
+                    context=AgentService._build_product_context(
+                        product_id=product_id,
+                        product_name=product_name,
+                        user_message=user_message,
+                        history_context=context,
+                    ),
                     images=imagenes,
-                    intent="general"
+                    intent="catalog_customization"
                 )
                 respuesta_texto = response.content
                 imagenes_generadas = AgentService.IMAGE_URL_PATTERN.findall(respuesta_texto)

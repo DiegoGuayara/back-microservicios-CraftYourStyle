@@ -14,14 +14,36 @@ from typing import List
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
+def _build_session_response(sesion) -> SesionResponse:
+    return SesionResponse(
+        id=sesion.id,
+        id_user=sesion.id_user,
+        product_id=None,
+        product_name=None,
+        fecha_inicio=sesion.fecha_inicio,
+        fecha_fin=sesion.fecha_fin,
+        estado=sesion.estado.value if hasattr(sesion.estado, "value") else str(sesion.estado),
+    )
+
+
 @router.post("/session", response_model=SesionResponse)
 async def create_session(
     request: SesionCreate,
     db: Session = Depends(get_db)
 ):
     """Crea una nueva sesión de chat"""
+    if not request.terms_accepted:
+        raise HTTPException(
+            status_code=400,
+            detail="Debes aceptar los términos y condiciones antes de usar el agente."
+        )
+    if not request.product_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Debes seleccionar una prenda del catálogo antes de iniciar la sesión."
+        )
     sesion = await AgentService.create_session(db, request.id_user)
-    return sesion
+    return _build_session_response(sesion)
 
 
 @router.get("/session/{sesion_id}", response_model=SesionResponse)
@@ -33,7 +55,7 @@ async def get_session(
     sesion = await AgentService.get_session(db, sesion_id)
     if not sesion:
         raise HTTPException(status_code=404, detail="Sesión no encontrada")
-    return sesion
+    return _build_session_response(sesion)
 
 
 @router.get("/session/user/{id_user}", response_model=SesionResponse)
@@ -45,7 +67,7 @@ async def get_active_session(
     sesion = await AgentService.get_active_session(db, id_user)
     if not sesion:
         raise HTTPException(status_code=404, detail="No hay sesión activa")
-    return sesion
+    return _build_session_response(sesion)
 
 
 @router.post("/session/{sesion_id}/close")
@@ -78,6 +100,16 @@ async def send_message(
     db: Session = Depends(get_db)
 ):
     """Envía un mensaje al agente y obtiene respuesta"""
+    if not request.terms_accepted:
+        raise HTTPException(
+            status_code=400,
+            detail="Debes aceptar los términos y condiciones antes de usar el agente."
+        )
+    if not request.product_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Debes seleccionar una prenda del catálogo antes de enviar mensajes."
+        )
     # Verificar que la sesión existe
     sesion = await AgentService.get_session(db, sesion_id)
     if not sesion:
@@ -85,7 +117,12 @@ async def send_message(
     
     # Procesar mensaje
     respuesta = await AgentService.process_user_message(
-        db, sesion_id, request.mensaje, request.imagenes
+        db,
+        sesion_id,
+        request.mensaje,
+        request.imagenes,
+        request.product_id,
+        request.product_name,
     )
     
     return ChatResponse(
