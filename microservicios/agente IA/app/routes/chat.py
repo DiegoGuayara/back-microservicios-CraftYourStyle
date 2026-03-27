@@ -123,6 +123,8 @@ async def send_message(
         request.imagenes,
         request.product_id,
         request.product_name,
+        request.product_description,
+        request.product_image_url,
     )
     
     return ChatResponse(

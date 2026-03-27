@@ -9,6 +9,8 @@ class MensajeRequest(BaseModel):
     imagenes: Optional[List[str]] = Field(None, description="URLs de imágenes adjuntas")
     product_id: Optional[int] = Field(None, description="ID de la prenda del catálogo")
     product_name: Optional[str] = Field(None, description="Nombre de la prenda seleccionada")
+    product_description: Optional[str] = Field(None, description="Descripción de la prenda seleccionada")
+    product_image_url: Optional[str] = Field(None, description="URL de la imagen base de la prenda seleccionada")
     terms_accepted: bool = Field(False, description="Aceptación explícita de términos")
     
 
@@ -31,6 +33,8 @@ class SesionCreate(BaseModel):
     id_user: int
     product_id: Optional[int] = None
     product_name: Optional[str] = None
+    product_description: Optional[str] = None
+    product_image_url: Optional[str] = None
     terms_accepted: bool = False
 
 

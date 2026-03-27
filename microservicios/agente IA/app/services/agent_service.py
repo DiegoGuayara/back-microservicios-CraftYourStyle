@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models import SesionIA, MensajeIA, TipoMensaje, EstadoSesion
 from app.agents.orchestrator import orchestrator
+from app.services.design_generation_service import DesignGenerationService
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import re
@@ -61,6 +62,41 @@ class AgentService:
         return any(keyword in message for keyword in forbidden_keywords)
 
     @staticmethod
+    def _is_generation_request(user_message: str) -> bool:
+        message = user_message.lower()
+        generation_keywords = [
+            "generala",
+            "genérala",
+            "generalo",
+            "genéralo",
+            "generar",
+            "genera",
+            "muestrame",
+            "muéstrame",
+            "muestrala",
+            "muéstrala",
+            "mostrar",
+            "muestralo",
+            "muéstralo",
+            "como se veria",
+            "cómo se vería",
+            "como quedaria",
+            "cómo quedaría",
+            "hazla",
+            "házla",
+            "hazlo",
+            "renderiza",
+            "visualizala",
+            "visualízala",
+            "visualizar",
+            "aplicalo",
+            "aplícalo",
+            "aplicala",
+            "aplícalo",
+        ]
+        return any(keyword in message for keyword in generation_keywords)
+
+    @staticmethod
     def _build_product_context(
         product_id: int,
         product_name: Optional[str],
@@ -74,9 +110,33 @@ class AgentService:
             f"Producto seleccionado: {normalized_name}.\n"
             f"ID del producto: {product_id}.\n"
             f"Tipo de prenda detectado: {garment_type}.\n"
-            "Acciones permitidas: cambiar color base, proponer logo, ubicar logo, ajustar tamano del logo.\n"
+            "Acciones permitidas: cambiar color base, agregar logos, ubicar logos, ajustar tamano del logo, "
+            "agregar patrones simples y geometricos como lineas, rayas, circulos, cuadrados o bloques de color "
+            "sobre la prenda actual.\n"
             "Acciones NO permitidas: generar prendas nuevas, crear outfits completos, hacer try-on, pedir otra prenda distinta, editar fuera de la prenda actual.\n"
             f"Historial reciente:\n{history_context}"
+        )
+
+    @staticmethod
+    def _build_generation_brief(
+        product_id: int,
+        product_name: Optional[str],
+        user_message: str,
+        history_context: str,
+    ) -> str:
+        garment_type = AgentService._detect_garment_type(product_name or user_message)
+        normalized_name = product_name or f"prenda #{product_id}"
+        return (
+            f"Personaliza la prenda real del catalogo '{normalized_name}' (ID {product_id}). "
+            f"Tipo de prenda: {garment_type}. "
+            "Debes conservar la misma silueta, el mismo encuadre de foto de producto y el mismo fondo limpio. "
+            "Solo modifica la superficie de la prenda actual. "
+            "Se permiten cambios de color base, logos, escudos, texto corto y patrones geometricos simples "
+            "como lineas, circulos, cuadrados, franjas o bloques. "
+            "No cambies la prenda por otra distinta, no agregues modelos, personas ni accesorios. "
+            "Si el usuario no pidio un estampado, manten la prenda limpia. "
+            f"Conversacion previa:\n{history_context}\n"
+            f"Ultimo mensaje del usuario: {user_message}"
         )
 
     @staticmethod
@@ -147,6 +207,8 @@ class AgentService:
         imagenes: Optional[List[str]] = None,
         product_id: Optional[int] = None,
         product_name: Optional[str] = None,
+        product_description: Optional[str] = None,
+        product_image_url: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Procesa un mensaje del usuario y genera respuesta del agente
@@ -187,9 +249,45 @@ class AgentService:
             if AgentService._is_out_of_scope_request(user_message):
                 respuesta_texto = (
                     "En esta fase solo puedo ayudarte con la prenda del catálogo que seleccionaste. "
-                    "Ahora mismo únicamente gestiono cambios de color y logo sobre esa prenda. "
+                    "Ahora mismo personalizo esa misma prenda con cambios de color, logos y patrones simples. "
                     "Todavía no puedo crear prendas nuevas, armar outfits completos ni hacer try-on desde el chat."
                 )
+            elif AgentService._is_generation_request(user_message):
+                if not product_image_url:
+                    respuesta_texto = (
+                        "Puedo generar la personalizacion, pero necesito la imagen base de la prenda seleccionada. "
+                        "Vuelve a abrir la personalizacion desde el catalogo e intenta de nuevo."
+                    )
+                else:
+                    garment_type = AgentService._detect_garment_type(
+                        " ".join(filter(None, [product_name, product_description, user_message]))
+                    )
+                    design_prompt_response = await orchestrator.generate_design_prompt(
+                        user_request=AgentService._build_generation_brief(
+                            product_id=product_id,
+                            product_name=product_name,
+                            user_message=user_message,
+                            history_context=context,
+                        ),
+                        garment_type=garment_type,
+                    )
+                    design_prompt = orchestrator._extract_text(design_prompt_response)
+                    negative_prompt = (
+                        DesignGenerationService.build_negative_prompt(context)
+                        + ", different garment, extra garments, hoodie, jacket, pants, dress, skirt, "
+                        "person, model, mannequin, change of camera angle, change of background, text overlay"
+                    )
+                    generated_image_url = await DesignGenerationService.generate_design_image(
+                        prompt=design_prompt,
+                        negative_prompt=negative_prompt,
+                        image_input=product_image_url,
+                        creativity=0.35,
+                    )
+                    imagenes_generadas = [generated_image_url]
+                    respuesta_texto = (
+                        "Listo, ya apliqué la personalización sobre la prenda seleccionada. "
+                        "Si quieres, ahora puedo hacer ajustes finos de color, tamaño, posición o patrón."
+                    )
             else:
                 response = await orchestrator.orchestrate(
                     user_message=user_message,
@@ -203,7 +301,10 @@ class AgentService:
                     intent="catalog_customization"
                 )
                 respuesta_texto = response.content
-                imagenes_generadas = AgentService.IMAGE_URL_PATTERN.findall(respuesta_texto)
+                imagenes_generadas = [
+                    match[0] if isinstance(match, tuple) else match
+                    for match in AgentService.IMAGE_URL_PATTERN.findall(respuesta_texto)
+                ]
         except Exception as e:
             respuesta_texto = f"Lo siento, hubo un error al procesar tu mensaje: {str(e)}"
 
