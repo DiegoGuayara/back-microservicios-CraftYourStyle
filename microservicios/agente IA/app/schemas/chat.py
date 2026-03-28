@@ -25,7 +25,6 @@ class MensajeResponse(BaseModel):
     class Config:
         from_attributes = True
         populate_by_name = True
-        allow_population_by_field_name = True
 
 
 class SesionCreate(BaseModel):
@@ -48,6 +47,22 @@ class SesionResponse(BaseModel):
     fecha_fin: Optional[datetime] = None
     estado: str
     
+    class Config:
+        from_attributes = True
+
+
+class SesionListItemResponse(BaseModel):
+    """Resumen de sesión para listados de historial"""
+    id: int
+    id_user: int
+    fecha_inicio: datetime
+    fecha_fin: Optional[datetime] = None
+    estado: str
+    last_message: Optional[str] = None
+    last_message_at: Optional[datetime] = None
+    total_messages: int = 0
+    preview_image_url: Optional[str] = None
+
     class Config:
         from_attributes = True
 

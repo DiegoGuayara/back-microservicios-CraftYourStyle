@@ -5,6 +5,7 @@ from app.schemas import (
     MensajeRequest,
     SesionCreate,
     SesionResponse,
+    SesionListItemResponse,
     ChatResponse,
     MensajeResponse
 )
@@ -68,6 +69,16 @@ async def get_active_session(
     if not sesion:
         raise HTTPException(status_code=404, detail="No hay sesión activa")
     return _build_session_response(sesion)
+
+
+@router.get("/sessions/user/{id_user}", response_model=List[SesionListItemResponse])
+async def list_user_sessions(
+    id_user: int,
+    limit: int = 10,
+    db: Session = Depends(get_db)
+):
+    """Lista sesiones recientes del usuario para el historial visual."""
+    return await AgentService.get_user_sessions(db, id_user, limit)
 
 
 @router.post("/session/{sesion_id}/close")

@@ -26,7 +26,7 @@ async def _fashion_agent_call(user_message: str, context: str = "No hay contexto
     1. Ayudar a cambiar el color base de la prenda actual
     2. Ayudar a definir un logo o escudo
     3. Sugerir donde ubicar el logo en la prenda actual
-    4. Proponer patrones simples sobre la misma prenda como lineas, rayas, circulos, cuadrados, bloques o franjas
+    4. Proponer patrones simples sobre la misma prenda como lineas, rayas, circulos, cuadrados, bloques, franjas o patrones florales sencillos como rosas y hojas
     5. Pedir aclaraciones breves sobre color, tamano, patron o posicion
 
     No puedes:
@@ -40,6 +40,8 @@ async def _fashion_agent_call(user_message: str, context: str = "No hay contexto
     a cambios sobre la prenda actual.
     Si ya hay suficientes detalles y el usuario pide generar o visualizar el resultado, responde con una
     confirmacion breve centrada en la personalizacion final.
+    No afirmes que la imagen ya fue aplicada o generada a menos que el sistema haya ejecutado realmente esa accion.
+    Si aun falta generar, limita tu respuesta a resumir el diseno o pedir confirmacion.
     Responde en espanol, con mensajes cortos, claros y enfocados en ejecutar sobre la prenda actual.
 
     Contexto del usuario:
@@ -58,7 +60,7 @@ async def _design_prompt_call(user_request: str, garment_type: str = "camiseta")
     Respeta estrictamente lo pedido por el usuario y NO inventes elementos.
     Debes conservar la misma prenda base, la misma silueta, el mismo tipo de foto catalogo y el mismo encuadre.
     Solo puedes modificar la superficie de la prenda con cambios como color, logos, escudos, texto corto y
-    patrones geometricos simples como stripes, lines, circles, squares, blocks or bands.
+    patrones geometricos o florales simples como stripes, lines, circles, squares, blocks, bands, roses, flowers or leaves.
     Si el usuario pide "liso" o "sin estampado", incluye explicitamente "solid color, no pattern, no stripes, no print".
     Si falta un detalle, no lo inventes; usa descripciones neutrales.
     Devuelve solo el prompt final en ingles, sin explicaciones ni texto extra.

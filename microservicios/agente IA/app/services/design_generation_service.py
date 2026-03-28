@@ -99,11 +99,26 @@ class DesignGenerationService:
         return "Balance creativity with commercial realism."
 
     @staticmethod
+    def _normalize_reference_images(
+        image_input: str | None,
+        extra_image_inputs: list[str] | None = None,
+    ) -> list[str]:
+        references: list[str] = []
+
+        for candidate in [image_input, *(extra_image_inputs or [])]:
+            normalized = (candidate or "").strip()
+            if normalized and normalized not in references:
+                references.append(normalized)
+
+        return references
+
+    @staticmethod
     def _build_prompt(
         prompt: str,
         negative_prompt: str | None,
         creativity: float | None,
-        image_input: str | None
+        image_input: str | None,
+        extra_image_inputs: list[str] | None = None,
     ) -> str:
         creativity_instruction = DesignGenerationService._build_creativity_instruction(
             creativity, image_input
@@ -118,6 +133,13 @@ class DesignGenerationService:
             prompt.strip(),
             creativity_instruction,
         ]
+
+        if extra_image_inputs:
+            prompt_parts.append(
+                "The first reference image is the catalog garment base. Any additional reference images are user-supplied artwork or logo references. "
+                "Apply that artwork onto the garment itself, preserving its core visual identity as much as possible. "
+                "Do not generate a separate poster, flyer, sticker sheet, or unrelated standalone illustration."
+            )
 
         if negative_prompt:
             prompt_parts.append(f"Avoid: {negative_prompt}.")
@@ -151,6 +173,7 @@ class DesignGenerationService:
         width: int = 1024,
         height: int = 1024,
         image_input: str | None = None,
+        extra_image_inputs: list[str] | None = None,
         creativity: float | None = None
     ) -> str:
         """
@@ -180,11 +203,16 @@ class DesignGenerationService:
 
         try:
             owner, model_name = DesignGenerationService._resolve_model_parts()
+            reference_images = DesignGenerationService._normalize_reference_images(
+                image_input=image_input,
+                extra_image_inputs=extra_image_inputs,
+            )
             final_prompt = DesignGenerationService._build_prompt(
                 prompt=prompt,
                 negative_prompt=negative_prompt,
                 creativity=creativity,
                 image_input=image_input,
+                extra_image_inputs=extra_image_inputs,
             )
             aspect_ratio = DesignGenerationService._resolve_aspect_ratio(width, height)
 
@@ -193,8 +221,8 @@ class DesignGenerationService:
                 "aspect_ratio": aspect_ratio,
                 "output_format": "png",
             }
-            if image_input and image_input.strip():
-                input_payload["image_input"] = [image_input.strip()]
+            if reference_images:
+                input_payload["image_input"] = reference_images
 
             async with httpx.AsyncClient(timeout=120.0) as client:
                 response = await client.post(

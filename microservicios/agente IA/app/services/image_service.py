@@ -5,10 +5,41 @@ from fastapi import UploadFile
 from typing import Optional
 import os
 import uuid
+import re
 
 
 class ImageService:
     """Servicio para manejo de imágenes"""
+    SESSION_MARKER_PATTERN = re.compile(r"^\[session:(\d+)\]\s*", re.IGNORECASE)
+
+    @staticmethod
+    def _with_session_marker(prompt: Optional[str], session_id: Optional[int]) -> Optional[str]:
+        normalized_prompt = (prompt or "").strip()
+        if not session_id:
+            return normalized_prompt or None
+        if normalized_prompt:
+            return f"[session:{session_id}] {normalized_prompt}"
+        return f"[session:{session_id}]"
+
+    @staticmethod
+    def _extract_session_id(prompt: Optional[str]) -> Optional[int]:
+        normalized_prompt = (prompt or "").strip()
+        if not normalized_prompt:
+            return None
+        match = ImageService.SESSION_MARKER_PATTERN.match(normalized_prompt)
+        if not match:
+            return None
+        try:
+            return int(match.group(1))
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _clean_prompt(prompt: Optional[str]) -> Optional[str]:
+        normalized_prompt = (prompt or "").strip()
+        if not normalized_prompt:
+            return None
+        return ImageService.SESSION_MARKER_PATTERN.sub("", normalized_prompt).strip() or None
 
     @staticmethod
     async def _persist_remote_image_if_needed(image_url: str, folder: str) -> str:
@@ -36,15 +67,40 @@ class ImageService:
             "id": row.id,
             "id_user": row.id_user,
             "image_url": row.image_url,
+            "session_id": ImageService._extract_session_id(getattr(row, "prompt", None)),
             "variant_id": getattr(row, "variant_id", None),
             "tipo": "usuario_diseño",
-            "prompt": getattr(row, "prompt", None),
+            "prompt": ImageService._clean_prompt(getattr(row, "prompt", None)),
             "garment_type": getattr(row, "garment_type", None),
             "estado": getattr(row, "estado", None),
             "precio": float(row.precio) if getattr(row, "precio", None) is not None else None,
             "created_at": getattr(row, "created_at", None),
             "updated_at": getattr(row, "updated_at", None),
         }
+
+    @staticmethod
+    async def upload_reference_image(
+        file: UploadFile,
+        id_user: int,
+    ) -> str:
+        """
+        Sube una imagen de referencia temporal para el agente sin guardarla en BD.
+        """
+        temp_path = f"uploads/{uuid.uuid4()}_{file.filename}"
+        os.makedirs("uploads", exist_ok=True)
+
+        with open(temp_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+
+        try:
+            result = await upload_image(temp_path, folder=f"users/{id_user}/references")
+            if not result.get("url"):
+                raise Exception("No se pudo subir la referencia a Cloudinary")
+            return result["url"]
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
     
     @staticmethod
     async def save_user_design_image(
@@ -82,7 +138,7 @@ class ImageService:
                 id_user=id_user,
                 image_url=result["url"],
                 variant_id=variant_id,
-                tipo="usuario_diseño"
+                tipo=TipoImagen.USUARIO_DISEÑO
             )
             db.add(imagen)
             db.commit()
@@ -173,6 +229,7 @@ class ImageService:
         db: Session,
         id_user: int,
         image_url: str,
+        session_id: Optional[int] = None,
         variant_id: Optional[int] = None,
         tipo: TipoImagen = TipoImagen.USUARIO_DISEÑO,
         prompt: Optional[str] = None,
@@ -189,7 +246,7 @@ class ImageService:
             image_url=stable_image_url,
             variant_id=variant_id,
             tipo=getattr(tipo, "value", tipo) or "usuario_diseño",
-            prompt=prompt,
+            prompt=ImageService._with_session_marker(prompt, session_id),
             garment_type=garment_type,
             estado="pendiente"
         )

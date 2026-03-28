@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.config.database import get_db
 from app.schemas import (
     ImagenUploadResponse,
+    ReferenciaUploadResponse,
     FotoUsuarioResponse,
     ImagenSaveRequest,
     ImagenSavedResponse,
@@ -14,6 +15,10 @@ from app.models import TipoImagen
 from typing import List, Optional
 
 router = APIRouter(prefix="/images", tags=["Images"])
+
+
+def _resolve_tipo_value(tipo) -> str:
+    return tipo.value if hasattr(tipo, "value") else str(tipo)
 
 
 @router.post("/design", response_model=ImagenUploadResponse)
@@ -33,10 +38,26 @@ async def upload_design_image(
         return ImagenUploadResponse(
             id=imagen.id,
             url=imagen.image_url,
-            tipo=imagen.tipo.value
+            tipo=_resolve_tipo_value(imagen.tipo)
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al subir imagen: {str(e)}")
+
+
+@router.post("/reference", response_model=ReferenciaUploadResponse)
+async def upload_reference_image(
+    file: UploadFile = File(...),
+    id_user: int = Form(...),
+):
+    """Sube una referencia temporal para el agente sin guardarla en la BD."""
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="El archivo debe ser una imagen")
+
+    try:
+        url = await ImageService.upload_reference_image(file, id_user)
+        return ReferenciaUploadResponse(url=url)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al subir referencia: {str(e)}")
 
 
 @router.post("/photo", response_model=FotoUsuarioResponse)
@@ -99,6 +120,7 @@ async def save_generated_image(
             db,
             id_user=payload.id_user,
             image_url=payload.image_url,
+            session_id=payload.session_id,
             variant_id=payload.variant_id,
             tipo=tipo,
             prompt=payload.prompt,

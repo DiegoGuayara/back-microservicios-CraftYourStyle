@@ -11,6 +11,12 @@ class ImagenUploadResponse(BaseModel):
     mensaje: str = "Imagen subida exitosamente"
 
 
+class ReferenciaUploadResponse(BaseModel):
+    """Response al subir una referencia temporal para el agente"""
+    url: str
+    mensaje: str = "Referencia subida exitosamente"
+
+
 class FotoUsuarioCreate(BaseModel):
     """Request para registrar foto de usuario"""
     id_user: int
@@ -33,6 +39,7 @@ class ImagenSaveRequest(BaseModel):
     """Request para guardar URL de imagen generada"""
     id_user: int
     image_url: str
+    session_id: Optional[int] = None
     variant_id: Optional[int] = None
     tipo: Optional[str] = "usuario_diseño"
     prompt: Optional[str] = None
@@ -44,6 +51,7 @@ class ImagenSavedResponse(BaseModel):
     id: int
     id_user: Optional[int] = None
     image_url: str
+    session_id: Optional[int] = None
     variant_id: Optional[int] = None
     tipo: str
     prompt: Optional[str] = None

@@ -3,10 +3,12 @@ from .chat import (
     MensajeResponse,
     SesionCreate,
     SesionResponse,
+    SesionListItemResponse,
     ChatResponse
 )
 from .image import (
     ImagenUploadResponse,
+    ReferenciaUploadResponse,
     FotoUsuarioCreate,
     FotoUsuarioResponse,
     ImagenSaveRequest,
@@ -25,8 +27,10 @@ __all__ = [
     "MensajeResponse",
     "SesionCreate",
     "SesionResponse",
+    "SesionListItemResponse",
     "ChatResponse",
     "ImagenUploadResponse",
+    "ReferenciaUploadResponse",
     "FotoUsuarioCreate",
     "FotoUsuarioResponse",
     "ImagenSaveRequest",
