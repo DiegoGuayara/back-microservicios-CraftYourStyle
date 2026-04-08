@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.config.database import get_db
 from app.schemas import TryOnRequest, TryOnResponse, TryOnFavoritoRequest
-from app.services import TryOnService
+from app.services import TryOnService, UsageLimitExceededError
 from typing import List
 
 router = APIRouter(prefix="/tryon", tags=["Virtual Try-On"])
@@ -25,6 +25,16 @@ async def generate_tryon(
         return prueba
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except UsageLimitExceededError as e:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": str(e),
+                "limit": e.status["limit"],
+                "remaining": e.status["remaining"],
+                "reset_at": e.status["reset_at"].isoformat(),
+            },
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al generar try-on: {str(e)}")
 

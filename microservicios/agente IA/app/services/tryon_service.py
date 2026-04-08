@@ -1,8 +1,9 @@
 from sqlalchemy.orm import Session
-from app.models import PruebaVirtual, FotoUsuario, Personalizacion
+from app.models import PruebaVirtual, FotoUsuario, Personalizacion, TipoUsoAgente
 from typing import Optional
 import httpx
 from app.config.settings import settings
+from app.services.usage_limit_service import UsageLimitService
 
 
 class TryOnService:
@@ -29,6 +30,8 @@ class TryOnService:
         Returns:
             PruebaVirtual con la imagen generada
         """
+        UsageLimitService.ensure_usage_available(db, id_user)
+
         # Obtener foto del usuario
         foto_usuario = db.query(FotoUsuario).filter(
             FotoUsuario.id == foto_usuario_id
@@ -70,6 +73,10 @@ class TryOnService:
         db.add(prueba)
         db.commit()
         db.refresh(prueba)
+        usage_status = UsageLimitService.register_usage(db, id_user, TipoUsoAgente.TRYON)
+        prueba.limite_24h = usage_status["limit"]
+        prueba.usos_restantes = usage_status["remaining"]
+        prueba.reset_at = usage_status["reset_at"]
         
         return prueba
     

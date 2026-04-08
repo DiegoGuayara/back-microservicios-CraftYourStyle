@@ -4,6 +4,7 @@ from .imagen import Imagen, TipoImagen, EstadoImagen
 from .foto_usuario import FotoUsuario
 from .prueba_virtual import PruebaVirtual
 from .personalizacion import Personalizacion
+from .uso_agente import UsoAgenteIA, TipoUsoAgente
 
 __all__ = [
     "SesionIA",
@@ -15,5 +16,7 @@ __all__ = [
     "EstadoImagen",
     "FotoUsuario",
     "PruebaVirtual",
-    "Personalizacion"
+    "Personalizacion",
+    "UsoAgenteIA",
+    "TipoUsoAgente",
 ]

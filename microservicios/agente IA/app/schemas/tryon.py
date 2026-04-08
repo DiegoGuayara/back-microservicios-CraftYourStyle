@@ -21,6 +21,9 @@ class TryOnResponse(BaseModel):
     imagen_resultado_url: str
     fecha_generacion: datetime
     favorito: bool
+    limite_24h: int = 5
+    usos_restantes: int = 5
+    reset_at: datetime
     
     class Config:
         from_attributes = True

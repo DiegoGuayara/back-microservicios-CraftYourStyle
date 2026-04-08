@@ -1,7 +1,16 @@
 from sqlalchemy.orm import Session
-from app.models import SesionIA, MensajeIA, TipoMensaje, EstadoSesion, Imagen, TipoImagen
+from app.models import (
+    SesionIA,
+    MensajeIA,
+    TipoMensaje,
+    EstadoSesion,
+    Imagen,
+    TipoImagen,
+    TipoUsoAgente,
+)
 from app.agents.orchestrator import orchestrator
 from app.services.design_generation_service import DesignGenerationService
+from app.services.usage_limit_service import UsageLimitExceededError, UsageLimitService
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import re
@@ -14,6 +23,37 @@ class AgentService:
         re.IGNORECASE,
     )
     SESSION_MARKER_PATTERN = re.compile(r"^\[session:(\d+)\]\s*", re.IGNORECASE)
+
+    @staticmethod
+    def _build_usage_limit_message(status: Dict[str, Any]) -> str:
+        reset_at = status["reset_at"].strftime("%Y-%m-%d %H:%M:%S UTC")
+        return (
+            f"Ya usaste tus {status['limit']} personalizaciones permitidas en las ultimas "
+            f"{status['window_hours']} horas. Podras volver a generar otra despues de {reset_at}."
+        )
+
+    @staticmethod
+    def _save_generated_images(
+        db: Session,
+        id_user: int,
+        image_urls: List[str],
+        product_id: Optional[int],
+        garment_type: str,
+        sesion_id: int,
+        user_message: str,
+    ) -> None:
+        for image_url in image_urls:
+            db.add(
+                Imagen(
+                    id_user=id_user,
+                    image_url=image_url,
+                    variant_id=product_id,
+                    tipo=TipoImagen.USUARIO_DISEÑO,
+                    prompt=f"[session:{sesion_id}] {user_message}",
+                    garment_type=garment_type,
+                )
+            )
+        db.commit()
 
 
     @staticmethod
@@ -453,6 +493,11 @@ class AgentService:
                 "Debes seleccionar una prenda del catálogo antes de usar el agente."
             )
 
+        sesion = await AgentService.get_session(db, sesion_id)
+        if not sesion:
+            raise ValueError("La sesion no existe o ya no esta disponible.")
+        id_user = sesion.id_user
+
         # Guardar mensaje del usuario
         metadata = {"imagenes": imagenes} if imagenes else None
         await AgentService.save_message(
@@ -473,6 +518,7 @@ class AgentService:
         ]
 
         imagenes_generadas: List[str] = []
+        usage_status = UsageLimitService.get_usage_status(db, id_user)
         should_generate_image = AgentService._is_generation_request(user_message) or (
             bool(previous_user_messages) and AgentService._is_final_confirmation(user_message)
         )
@@ -491,19 +537,36 @@ class AgentService:
                     "Todavía no puedo crear prendas nuevas, armar outfits completos ni hacer try-on desde el chat."
                 )
             elif should_generate_image:
-                imagenes_generadas = await AgentService._generate_catalog_customization(
-                    product_id=product_id,
-                    product_name=product_name,
-                    product_description=product_description,
-                    product_image_url=product_image_url,
-                    user_message=user_message,
-                    history_context=context,
-                    reference_images=imagenes,
-                )
-                respuesta_texto = (
-                    "Listo, ya apliqué la personalización sobre la prenda seleccionada. "
-                    "Si quieres, ahora puedo hacer ajustes finos de color, tamaño, posición o patrón."
-                )
+                try:
+                    UsageLimitService.ensure_usage_available(db, id_user)
+                    imagenes_generadas = await AgentService._generate_catalog_customization(
+                        product_id=product_id,
+                        product_name=product_name,
+                        product_description=product_description,
+                        product_image_url=product_image_url,
+                        user_message=user_message,
+                        history_context=context,
+                        reference_images=imagenes,
+                    )
+                    AgentService._save_generated_images(
+                        db=db,
+                        id_user=id_user,
+                        image_urls=imagenes_generadas,
+                        product_id=product_id,
+                        garment_type=AgentService._detect_garment_type(product_name or user_message),
+                        sesion_id=sesion_id,
+                        user_message=user_message,
+                    )
+                    usage_status = UsageLimitService.register_usage(
+                        db, id_user, TipoUsoAgente.PERSONALIZACION
+                    )
+                    respuesta_texto = (
+                        "Listo, ya apliqué la personalización sobre la prenda seleccionada. "
+                        "Si quieres, ahora puedo hacer ajustes finos de color, tamaño, posición o patrón."
+                    )
+                except UsageLimitExceededError as e:
+                    usage_status = e.status
+                    respuesta_texto = AgentService._build_usage_limit_message(e.status)
             else:
                 response = await orchestrator.orchestrate(
                     user_message=user_message,
@@ -525,22 +588,41 @@ class AgentService:
                 imagenes_generadas = detected_urls
 
                 if not imagenes_generadas and AgentService._assistant_declares_ready(respuesta_texto):
-                    imagenes_generadas = await AgentService._generate_catalog_customization(
-                        product_id=product_id,
-                        product_name=product_name,
-                        product_description=product_description,
-                        product_image_url=product_image_url,
-                        user_message=user_message,
-                        history_context=context,
-                        reference_images=imagenes,
-                    )
-                    if "ya apliqué la personalización" not in respuesta_texto.lower():
-                        respuesta_texto = (
-                            "Listo, ya apliqué la personalización sobre la prenda seleccionada. "
-                            "Si quieres, ahora puedo hacer ajustes finos de color, tamaño, posición o patrón."
+                    try:
+                        UsageLimitService.ensure_usage_available(db, id_user)
+                        imagenes_generadas = await AgentService._generate_catalog_customization(
+                            product_id=product_id,
+                            product_name=product_name,
+                            product_description=product_description,
+                            product_image_url=product_image_url,
+                            user_message=user_message,
+                            history_context=context,
+                            reference_images=imagenes,
                         )
+                        AgentService._save_generated_images(
+                            db=db,
+                            id_user=id_user,
+                            image_urls=imagenes_generadas,
+                            product_id=product_id,
+                            garment_type=AgentService._detect_garment_type(product_name or user_message),
+                            sesion_id=sesion_id,
+                            user_message=user_message,
+                        )
+                        usage_status = UsageLimitService.register_usage(
+                            db, id_user, TipoUsoAgente.PERSONALIZACION
+                        )
+                        if "ya apliqué la personalización" not in respuesta_texto.lower():
+                            respuesta_texto = (
+                                "Listo, ya apliqué la personalización sobre la prenda seleccionada. "
+                                "Si quieres, ahora puedo hacer ajustes finos de color, tamaño, posición o patrón."
+                            )
+                    except UsageLimitExceededError as e:
+                        usage_status = e.status
+                        respuesta_texto = AgentService._build_usage_limit_message(e.status)
+                        imagenes_generadas = []
         except Exception as e:
             respuesta_texto = f"Lo siento, hubo un error al procesar tu mensaje: {str(e)}"
+            usage_status = UsageLimitService.get_usage_status(db, id_user)
 
         # Guardar respuesta del agente
         ia_metadata = {"imagenes_generadas": imagenes_generadas} if imagenes_generadas else None
@@ -550,6 +632,7 @@ class AgentService:
 
         return {
             "mensaje": respuesta_texto,
-            "imagenes_generadas": imagenes_generadas or None
+            "imagenes_generadas": imagenes_generadas or None,
+            "usage_status": usage_status,
         }
 

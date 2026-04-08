@@ -58,3 +58,12 @@ create table notificaciones(
 	tipo_de_notificacion enum("mensaje de texto","correo electronico","push"),
     mensaje varchar(250) not null
 );
+
+create table usos_agente_ia(
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_user INT NOT NULL,
+    tipo_uso ENUM("personalizacion", "tryon") NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_usos_agente_user_created_at (id_user, created_at),
+    FOREIGN KEY (id_user) REFERENCES usuarios(id)
+);

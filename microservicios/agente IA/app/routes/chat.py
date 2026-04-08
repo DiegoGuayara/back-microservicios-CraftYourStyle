@@ -9,13 +9,14 @@ from app.schemas import (
     ChatResponse,
     MensajeResponse
 )
-from app.services import AgentService
+from app.services import AgentService, UsageLimitService
 from typing import List
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
 def _build_session_response(sesion) -> SesionResponse:
+    usage_status = getattr(sesion, "_usage_status", None)
     return SesionResponse(
         id=sesion.id,
         id_user=sesion.id_user,
@@ -24,6 +25,9 @@ def _build_session_response(sesion) -> SesionResponse:
         fecha_inicio=sesion.fecha_inicio,
         fecha_fin=sesion.fecha_fin,
         estado=sesion.estado.value if hasattr(sesion.estado, "value") else str(sesion.estado),
+        limite_24h=usage_status["limit"] if usage_status else 5,
+        usos_restantes=usage_status["remaining"] if usage_status else 5,
+        reset_at=usage_status["reset_at"] if usage_status else sesion.fecha_inicio,
     )
 
 
@@ -44,6 +48,7 @@ async def create_session(
             detail="Debes seleccionar una prenda del catálogo antes de iniciar la sesión."
         )
     sesion = await AgentService.create_session(db, request.id_user)
+    sesion._usage_status = UsageLimitService.get_usage_status(db, request.id_user)
     return _build_session_response(sesion)
 
 
@@ -56,6 +61,7 @@ async def get_session(
     sesion = await AgentService.get_session(db, sesion_id)
     if not sesion:
         raise HTTPException(status_code=404, detail="Sesión no encontrada")
+    sesion._usage_status = UsageLimitService.get_usage_status(db, sesion.id_user)
     return _build_session_response(sesion)
 
 
@@ -68,6 +74,7 @@ async def get_active_session(
     sesion = await AgentService.get_active_session(db, id_user)
     if not sesion:
         raise HTTPException(status_code=404, detail="No hay sesión activa")
+    sesion._usage_status = UsageLimitService.get_usage_status(db, sesion.id_user)
     return _build_session_response(sesion)
 
 
@@ -141,5 +148,8 @@ async def send_message(
     return ChatResponse(
         sesion_id=sesion_id,
         mensaje=respuesta["mensaje"],
-        imagenes_generadas=respuesta.get("imagenes_generadas")
+        imagenes_generadas=respuesta.get("imagenes_generadas"),
+        limite_24h=respuesta["usage_status"]["limit"],
+        usos_restantes=respuesta["usage_status"]["remaining"],
+        reset_at=respuesta["usage_status"]["reset_at"],
     )

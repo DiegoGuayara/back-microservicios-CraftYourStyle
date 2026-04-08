@@ -46,6 +46,9 @@ class SesionResponse(BaseModel):
     fecha_inicio: datetime
     fecha_fin: Optional[datetime] = None
     estado: str
+    limite_24h: int = 5
+    usos_restantes: int = 5
+    reset_at: datetime
     
     class Config:
         from_attributes = True
@@ -72,3 +75,6 @@ class ChatResponse(BaseModel):
     sesion_id: int
     mensaje: str
     imagenes_generadas: Optional[List[str]] = None
+    limite_24h: int = 5
+    usos_restantes: int = 5
+    reset_at: datetime
