@@ -20,7 +20,8 @@ async def generate_tryon(
             request.id_user,
             request.foto_usuario_id,
             request.personalizacion_id,
-            request.variant_id
+            request.variant_id,
+            request.garment_image_url,
         )
         return prueba
     except ValueError as e:

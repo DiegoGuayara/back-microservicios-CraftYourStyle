@@ -15,7 +15,8 @@ class TryOnService:
         id_user: int,
         foto_usuario_id: int,
         personalizacion_id: Optional[int] = None,
-        variant_id: Optional[int] = None
+        variant_id: Optional[int] = None,
+        garment_image_url: Optional[str] = None,
     ) -> PruebaVirtual:
         """
         Genera un virtual try-on usando Banana
@@ -41,23 +42,23 @@ class TryOnService:
             raise ValueError("Foto de usuario no encontrada")
         
         # Obtener imagen de la prenda/personalización
-        garment_image_url = None
+        resolved_garment_image_url = garment_image_url
         if personalizacion_id:
             personalizacion = db.query(Personalizacion).filter(
                 Personalizacion.id == personalizacion_id
             ).first()
             if personalizacion:
-                garment_image_url = personalizacion.image_url
+                resolved_garment_image_url = personalizacion.image_url
         
-        if not garment_image_url:
+        if not resolved_garment_image_url:
             # TODO: Obtener imagen del producto base desde catálogo
-            garment_image_url = "https://placeholder.com/garment.jpg"
+            resolved_garment_image_url = "https://placeholder.com/garment.jpg"
         
         # Llamar a Banana para generar try-on
         try:
             result_url = await TryOnService._call_banana_tryon(
                 person_image=foto_usuario.foto_url,
-                garment_image=garment_image_url
+                garment_image=resolved_garment_image_url
             )
         except Exception as e:
             raise Exception(f"Error al generar try-on: {str(e)}")
