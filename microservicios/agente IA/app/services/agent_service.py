@@ -38,6 +38,38 @@ class AgentService:
 
     @staticmethod
     def _is_out_of_scope_request(user_message: str) -> bool:
+        return (
+            AgentService._is_tryon_request(user_message)
+            or AgentService._is_catalog_scope_break_request(user_message)
+        )
+
+    @staticmethod
+    def _is_tryon_request(user_message: str) -> bool:
+        message = user_message.lower()
+        forbidden_keywords = [
+            "try on",
+            "try-on",
+            "probarme",
+            "pruebamela",
+            "pruébamela",
+            "ponmela",
+            "ponérmela",
+            "ponermela",
+            "visteme",
+            "vísteme",
+            "sobre mi foto",
+            "sobre mi cuerpo",
+            "en mi cuerpo",
+            "usando mi foto",
+            "como me veria",
+            "cómo me vería",
+            "como me quedaria",
+            "cómo me quedaría",
+        ]
+        return any(keyword in message for keyword in forbidden_keywords)
+
+    @staticmethod
+    def _is_catalog_scope_break_request(user_message: str) -> bool:
         message = user_message.lower()
         forbidden_keywords = [
             "outfit completo",
@@ -53,12 +85,6 @@ class AgentService:
             "nueva sudadera",
             "nueva camisa",
             "nueva camiseta",
-            "try on",
-            "try-on",
-            "probarme",
-            "subir una foto",
-            "foto mia",
-            "foto mía",
         ]
         return any(keyword in message for keyword in forbidden_keywords)
 
@@ -452,7 +478,13 @@ class AgentService:
         )
 
         try:
-            if AgentService._is_out_of_scope_request(user_message):
+            if AgentService._is_tryon_request(user_message):
+                respuesta_texto = (
+                    "Puedo tomar tu foto como referencia visual para colores, logos o estampados "
+                    "y aplicarlos sobre la prenda del catálogo que seleccionaste. "
+                    "Lo que todavía no puedo hacer es try-on ni ponerte la prenda sobre tu foto desde el chat."
+                )
+            elif AgentService._is_catalog_scope_break_request(user_message):
                 respuesta_texto = (
                     "En esta fase solo puedo ayudarte con la prenda del catálogo que seleccionaste. "
                     "Ahora mismo personalizo esa misma prenda con cambios de color, logos y patrones simples. "
