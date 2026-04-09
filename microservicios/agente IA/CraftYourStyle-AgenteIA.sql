@@ -75,3 +75,11 @@ CREATE TABLE pruebas_virtuales (
     FOREIGN KEY (foto_usuario_id) REFERENCES fotos_usuario(id),
     FOREIGN KEY (personalizacion_id) REFERENCES personalizacion(id)
 );
+
+create table usos_agente_ia(
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_user INT NOT NULL,
+    tipo_uso ENUM("personalizacion", "tryon") NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_usos_agente_user_created_at (id_user, created_at)
+);

@@ -47,14 +47,15 @@ class Settings(BaseSettings):
     CLOUDINARY_API_SECRET: Optional[str] = None  # Tu API secret
     
     # ==================== MODELOS DE MACHINE LEARNING ====================
-    # Banana - Plataforma para ejecutar modelos de ML
-    # Usado para Virtual Try-On (probarse prendas virtualmente)
-    BANANA_API_KEY: Optional[str] = None
-    
     # Replicate - Plataforma para ejecutar modelos de IA
-    # Usado para generar imágenes de diseños de prendas
+    # Usado para generar imágenes de diseños de prendas y virtual try-on
     REPLICATE_API_TOKEN: Optional[str] = None
     REPLICATE_IMAGE_MODEL: str = "google/nano-banana-pro"
+    REPLICATE_TRYON_VERSION: str = (
+        "cuuupid/idm-vton:"
+        "0452664a003fbcc9bd2b9dbe31207b6bde4fb33932a226d67b72a28e5306bf77"
+    )
+    REPLICATE_TRYON_DEFAULT_CATEGORY: str = "upper_body"
     
     # ==================== MENSAJERÍA ENTRE MICROSERVICIOS ====================
     # RabbitMQ - Sistema de colas para comunicación asíncrona entre microservicios

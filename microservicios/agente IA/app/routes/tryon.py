@@ -22,10 +22,12 @@ async def generate_tryon(
             request.personalizacion_id,
             request.variant_id,
             request.garment_image_url,
+            request.garment_description,
+            request.garment_category,
         )
         return prueba
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
     except UsageLimitExceededError as e:
         raise HTTPException(
             status_code=429,
@@ -36,8 +38,10 @@ async def generate_tryon(
                 "reset_at": e.status["reset_at"].isoformat(),
             },
         )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al generar try-on: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/user/{id_user}", response_model=List[TryOnResponse])

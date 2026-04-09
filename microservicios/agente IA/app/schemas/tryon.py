@@ -10,6 +10,8 @@ class TryOnRequest(BaseModel):
     personalizacion_id: Optional[int] = None
     variant_id: Optional[int] = None
     garment_image_url: Optional[str] = None
+    garment_description: Optional[str] = None
+    garment_category: Optional[str] = None
 
 
 class TryOnResponse(BaseModel):

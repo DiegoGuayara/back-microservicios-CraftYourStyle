@@ -1,5 +1,6 @@
+from sqlalchemy import text
 from sqlalchemy.orm import Session
-from app.models import Imagen, FotoUsuario, TipoImagen, EstadoImagen
+from app.models import Imagen, FotoUsuario, PruebaVirtual, TipoImagen, EstadoImagen
 from app.config.storage import upload_image, upload_remote_image, delete_image
 from fastapi import UploadFile
 from typing import Optional
@@ -219,7 +220,52 @@ class ImageService:
         ).first()
         
         if foto:
-            db.delete(foto)
+            db.execute(
+                text(
+                    """
+                    DELETE FROM pruebas_virtuales
+                    WHERE foto_usuario_id = :foto_id AND id_user = :id_user
+                    """
+                ),
+                {"foto_id": foto.id, "id_user": id_user},
+            )
+
+            db.execute(
+                text(
+                    """
+                    DELETE FROM fotos_usuario
+                    WHERE id = :foto_id AND id_user = :id_user
+                    """
+                ),
+                {"foto_id": foto.id, "id_user": id_user},
+            )
+
+            if foto.es_principal:
+                siguiente_foto = db.execute(
+                    text(
+                        """
+                        SELECT id
+                        FROM fotos_usuario
+                        WHERE id_user = :id_user
+                        ORDER BY fecha_subida DESC
+                        LIMIT 1
+                        """
+                    ),
+                    {"id_user": id_user},
+                ).fetchone()
+
+                if siguiente_foto:
+                    db.execute(
+                        text(
+                            """
+                            UPDATE fotos_usuario
+                            SET es_principal = TRUE
+                            WHERE id = :foto_id
+                            """
+                        ),
+                        {"foto_id": siguiente_foto.id},
+                    )
+
             db.commit()
             return True
         return False

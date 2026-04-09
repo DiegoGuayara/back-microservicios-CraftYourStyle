@@ -96,10 +96,15 @@ async def delete_photo(
     db: Session = Depends(get_db)
 ):
     """Elimina una foto del usuario"""
-    success = await ImageService.delete_user_photo(db, foto_id, id_user)
-    if not success:
-        raise HTTPException(status_code=404, detail="Foto no encontrada")
-    return {"message": "Foto eliminada exitosamente"}
+    try:
+        success = await ImageService.delete_user_photo(db, foto_id, id_user)
+        if not success:
+            raise HTTPException(status_code=404, detail="Foto no encontrada")
+        return {"message": "Foto eliminada exitosamente"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"No se pudo eliminar la foto: {str(e)}")
 
 
 @router.post("/save", response_model=ImagenSavedResponse)
